@@ -1,0 +1,2441 @@
+{
+  "purpose": "Exploratory task-design pilot; not a held-out benchmark",
+  "runtime": {
+    "node": "v24.18.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M1 Pro"
+  },
+  "runs": [
+    {
+      "run": 0,
+      "definition": {
+        "id": "experiment-pilot-v1-0",
+        "world": {
+          "width": 800,
+          "height": 600,
+          "foodCount": 48,
+          "obstacleCount": 0,
+          "bodyRadius": 8,
+          "foodRadius": 4,
+          "sensorRange": 140,
+          "vMax": 90,
+          "omegaMax": 3.141592653589793,
+          "maxTicks": 1800,
+          "maxEnergy": 100,
+          "foodEnergy": 20
+        },
+        "evolution": {
+          "population": 128,
+          "elites": 4,
+          "immigrants": 8,
+          "trials": 3,
+          "tournamentSize": 4,
+          "mutationProbability": 0.1,
+          "mutationSigma": 0.05,
+          "validationInterval": 10,
+          "validationTrials": 16
+        },
+        "roots": {
+          "initialization": "pilot-v1-0:initialization",
+          "training": "pilot-v1-0:training",
+          "evolution": "pilot-v1-0:evolution",
+          "validation": "pilot-v1-0:validation"
+        }
+      },
+      "initialValidation": 6.75,
+      "finalValidation": 22.25,
+      "initialNonzeroFraction": 0.765625,
+      "baselines": {
+        "frozenRandom": 0.875,
+        "randomActions": 0.5,
+        "scripted": 22.125
+      },
+      "generationSeconds": {
+        "median": 2.277875541999994,
+        "p95": 4.492599833
+      },
+      "summaries": [
+        {
+          "generation": 0,
+          "trainBest": 7.333333333333333,
+          "trainMean": 1.3880208333333333,
+          "validation": [],
+          "commitId": "5d7342711f38363c998a922bc763f02d5de08bb1a0f74c11304075e20807d692"
+        },
+        {
+          "generation": 1,
+          "trainBest": 9.333333333333334,
+          "trainMean": 2.546875,
+          "validation": [],
+          "commitId": "a4794e8b52cba35f5706d42718d9c85f4d4327d466a0a0e75fbd9195569c61f8"
+        },
+        {
+          "generation": 2,
+          "trainBest": 10.333333333333334,
+          "trainMean": 4.221354166666667,
+          "validation": [],
+          "commitId": "7f2a34973e302c7af4df3294a6228ef82532ae69bcfdacb6c317b795730362c2"
+        },
+        {
+          "generation": 3,
+          "trainBest": 12.333333333333334,
+          "trainMean": 5.247395833333333,
+          "validation": [],
+          "commitId": "5d278c7cf65ff89640d0c8243f4a6362aa08ce903e65814e4c655f16471c9fe6"
+        },
+        {
+          "generation": 4,
+          "trainBest": 16,
+          "trainMean": 7.450520833333333,
+          "validation": [],
+          "commitId": "d16e374ee32973f1fc3bd0f9b9ed4a0e59b84b5ea5d533d5ceacedfce61c92c0"
+        },
+        {
+          "generation": 5,
+          "trainBest": 12.333333333333334,
+          "trainMean": 5.450520833333333,
+          "validation": [],
+          "commitId": "ff569f65fffbb1fa5ea1ca55999072dc9a434970a83d625b6eb428d3fbe75baa"
+        },
+        {
+          "generation": 6,
+          "trainBest": 10.666666666666666,
+          "trainMean": 5.736979166666667,
+          "validation": [],
+          "commitId": "874d6fa60e5fd04d4e5220ccc73319fee25a23499b5ef77befd6cc5db1a212d9"
+        },
+        {
+          "generation": 7,
+          "trainBest": 16.333333333333332,
+          "trainMean": 8.307291666666666,
+          "validation": [],
+          "commitId": "c55cf7a35b4e4b21e5da3dded1eab974b4c7652921bc1bc2939e8b58d779b1a9"
+        },
+        {
+          "generation": 8,
+          "trainBest": 15.666666666666666,
+          "trainMean": 8.455729166666666,
+          "validation": [],
+          "commitId": "7c1995bec1ddc2ebab5f34b4518efbb5e63fd7c5b870c9760c00bce49d56b02c"
+        },
+        {
+          "generation": 9,
+          "trainBest": 15,
+          "trainMean": 9.635416666666666,
+          "validation": [
+            16,
+            9,
+            8,
+            4,
+            13,
+            11,
+            16,
+            7,
+            9,
+            8,
+            6,
+            8,
+            12,
+            15,
+            11,
+            10
+          ],
+          "commitId": "75158f4019fea2e96484b20cc50e02c5766084ee5b81a7584f5d5b3893ac5238"
+        },
+        {
+          "generation": 10,
+          "trainBest": 14.333333333333334,
+          "trainMean": 8.59375,
+          "validation": [],
+          "commitId": "10005cda2fd108e29d8d8bcccaabdb504326e572347da20dac86103e577ec08d"
+        },
+        {
+          "generation": 11,
+          "trainBest": 18,
+          "trainMean": 11.65625,
+          "validation": [],
+          "commitId": "a2cc73fd0133151cda49fa17f007614b4cc39c5f00f5c53fb3033e899125dd11"
+        },
+        {
+          "generation": 12,
+          "trainBest": 19,
+          "trainMean": 9.606770833333334,
+          "validation": [],
+          "commitId": "0408379b9e312929e8cb3b141d965ef3add90396136f7e8cb2fa03fcc86ab74b"
+        },
+        {
+          "generation": 13,
+          "trainBest": 17.666666666666668,
+          "trainMean": 11.190104166666666,
+          "validation": [],
+          "commitId": "bc1a306862d082e04517accaa4e8e1359124b7bb63ecb15437232e2e49f32192"
+        },
+        {
+          "generation": 14,
+          "trainBest": 19.666666666666668,
+          "trainMean": 12.385416666666666,
+          "validation": [],
+          "commitId": "8bb682f03ffa23391e32d3492988529fd09dcf0b4811f3548b780e2d7d17d234"
+        },
+        {
+          "generation": 15,
+          "trainBest": 20.333333333333332,
+          "trainMean": 13.419270833333334,
+          "validation": [],
+          "commitId": "ee2e870cc070bc3c457020a9e91a5e7a940b8a52ac68e8ee8f68cd73431809ba"
+        },
+        {
+          "generation": 16,
+          "trainBest": 19,
+          "trainMean": 13.692708333333334,
+          "validation": [],
+          "commitId": "2a31d908bf439d9018567cc49250329160e0486fa553b12a7f176f1d45010b24"
+        },
+        {
+          "generation": 17,
+          "trainBest": 21.666666666666668,
+          "trainMean": 14.169270833333334,
+          "validation": [],
+          "commitId": "bfe2f4f6c27be404643b8fcbb0337b8f9cab60d79ef3ba50544ec977fcfaad83"
+        },
+        {
+          "generation": 18,
+          "trainBest": 22.333333333333332,
+          "trainMean": 15.515625,
+          "validation": [],
+          "commitId": "65cd151949ee0ce9527d5c8ade0d9bf3a2e85ed93a2c0bcf2435a0a1ac51f8e2"
+        },
+        {
+          "generation": 19,
+          "trainBest": 22.666666666666668,
+          "trainMean": 16.25,
+          "validation": [
+            18,
+            19,
+            15,
+            19,
+            21,
+            19,
+            24,
+            17,
+            18,
+            17,
+            25,
+            22,
+            20,
+            18,
+            18,
+            17
+          ],
+          "commitId": "04071f2ab4255010a2f8c31bdee97877edccd786b1dfd32496c3534d2b6e6eff"
+        },
+        {
+          "generation": 20,
+          "trainBest": 22,
+          "trainMean": 15.638020833333334,
+          "validation": [],
+          "commitId": "0e8d1fdf6b0a6dbe8dd3be36dae4607a16d4a6bff993782e7f7011e3b5d687dc"
+        },
+        {
+          "generation": 21,
+          "trainBest": 23,
+          "trainMean": 16.364583333333332,
+          "validation": [],
+          "commitId": "c3ee029f577204443a3cfd66970ce7fe265fb1cb75b3d17b56c7df1be2c28b5c"
+        },
+        {
+          "generation": 22,
+          "trainBest": 22.666666666666668,
+          "trainMean": 15.8046875,
+          "validation": [],
+          "commitId": "986c7b97730602911f451d474a79e43c9645468f318954043c384e3d9337a1b8"
+        },
+        {
+          "generation": 23,
+          "trainBest": 24,
+          "trainMean": 16.252604166666668,
+          "validation": [],
+          "commitId": "d960766b82060e65aa809588160ae4024bc6e9d85dafe2e4d4da922666d1eee7"
+        },
+        {
+          "generation": 24,
+          "trainBest": 21.333333333333332,
+          "trainMean": 16.104166666666668,
+          "validation": [],
+          "commitId": "d09817bc25776c3e0bdb1db19ef6611a0ff92a39295f5ba7e5801e267f63f642"
+        },
+        {
+          "generation": 25,
+          "trainBest": 22.333333333333332,
+          "trainMean": 16.34375,
+          "validation": [],
+          "commitId": "2cfa7ae0ab815c02ae54b9501f2ed648db8a22a4900347fde17955411178a94e"
+        },
+        {
+          "generation": 26,
+          "trainBest": 22.666666666666668,
+          "trainMean": 15.90625,
+          "validation": [],
+          "commitId": "0c634a3b4ba1f6537bbe1ca6594be072cd109fe23c8e6b05150ad18421f77f19"
+        },
+        {
+          "generation": 27,
+          "trainBest": 23.333333333333332,
+          "trainMean": 17.9375,
+          "validation": [],
+          "commitId": "83ebd786d24abdd0173a6b656129ea7a7a73489d6c41e57b8d931d82f8b12cfc"
+        },
+        {
+          "generation": 28,
+          "trainBest": 23.666666666666668,
+          "trainMean": 16.635416666666668,
+          "validation": [],
+          "commitId": "dfdd3f69a1ad6614af20103bd41726f59bcb96ec7e327f9395b237d945d2e074"
+        },
+        {
+          "generation": 29,
+          "trainBest": 24,
+          "trainMean": 17.213541666666668,
+          "validation": [
+            31,
+            17,
+            20,
+            14,
+            20,
+            20,
+            19,
+            17,
+            25,
+            22,
+            20,
+            19,
+            23,
+            15,
+            18,
+            22
+          ],
+          "commitId": "037cb523f26697c7ee231e74beff96b7286cf580691e31893057df1aeb2acd38"
+        },
+        {
+          "generation": 30,
+          "trainBest": 24,
+          "trainMean": 17.682291666666668,
+          "validation": [],
+          "commitId": "fdf05880eeb9fc2e0e209020a4d211e8988f3903741c25b5b02c514450bbe048"
+        },
+        {
+          "generation": 31,
+          "trainBest": 22.666666666666668,
+          "trainMean": 16.455729166666668,
+          "validation": [],
+          "commitId": "14274cb384e0532006805ed3e659edc1b9c4db7b86bccd93dcd0062d9aedf35b"
+        },
+        {
+          "generation": 32,
+          "trainBest": 24,
+          "trainMean": 17.7265625,
+          "validation": [],
+          "commitId": "7b1243fe3bd4c530f0c8c2cca3e36b740c3af61f0cd241b36908210216a7642a"
+        },
+        {
+          "generation": 33,
+          "trainBest": 25.333333333333332,
+          "trainMean": 19.15625,
+          "validation": [],
+          "commitId": "0472292ce161ccefff81cf8c1babdd7ff44ee46b09a17235354a2f209921462f"
+        },
+        {
+          "generation": 34,
+          "trainBest": 22,
+          "trainMean": 17.302083333333332,
+          "validation": [],
+          "commitId": "f5ccc7bf1d72f90d06d4914426d1589590d806fef2bcc0e94ab4a8a0f8a1d301"
+        },
+        {
+          "generation": 35,
+          "trainBest": 25.333333333333332,
+          "trainMean": 18.536458333333332,
+          "validation": [],
+          "commitId": "dc2ad2671a722f8e044743a190a0d73121b9caf5b379ed3006a7410c3778a610"
+        },
+        {
+          "generation": 36,
+          "trainBest": 25.666666666666668,
+          "trainMean": 19.364583333333332,
+          "validation": [],
+          "commitId": "6da9aaafe20730380dae93a94861431d3c55600631b31c03fab1fc51afcff62a"
+        },
+        {
+          "generation": 37,
+          "trainBest": 25,
+          "trainMean": 18.986979166666668,
+          "validation": [],
+          "commitId": "3cf44a3a45520d4007d4240248589c5eb3b843000f8431e763aad5571c710e72"
+        },
+        {
+          "generation": 38,
+          "trainBest": 23.333333333333332,
+          "trainMean": 18.1875,
+          "validation": [],
+          "commitId": "c9a5f8788ea46de7f2eac88800c56fc266608be4a84c1c98abb10f1486eedeb7"
+        },
+        {
+          "generation": 39,
+          "trainBest": 27.333333333333332,
+          "trainMean": 19.440104166666668,
+          "validation": [
+            27,
+            15,
+            21,
+            15,
+            24,
+            21,
+            28,
+            21,
+            27,
+            20,
+            23,
+            25,
+            20,
+            26,
+            24,
+            18
+          ],
+          "commitId": "aaace382411ddedf4efe1578bb0b6c5be815c3c6c935717bfecf25600d160e1d"
+        },
+        {
+          "generation": 40,
+          "trainBest": 24,
+          "trainMean": 18.557291666666668,
+          "validation": [],
+          "commitId": "b25d40fb4cae6c427df13d615272d16935447531798ec7d493d4d4485d2ecd39"
+        },
+        {
+          "generation": 41,
+          "trainBest": 26,
+          "trainMean": 18.1953125,
+          "validation": [],
+          "commitId": "460c0b165a46b7dca19850fb4701beca10eef7801fdc56319a2fdbcb6bfcad02"
+        },
+        {
+          "generation": 42,
+          "trainBest": 24.666666666666668,
+          "trainMean": 19.013020833333332,
+          "validation": [],
+          "commitId": "2ee5c12659a0189548dee6aaa62982911f69042e0f18dbfe828bc5fb2fee7b2b"
+        },
+        {
+          "generation": 43,
+          "trainBest": 24.333333333333332,
+          "trainMean": 18.307291666666668,
+          "validation": [],
+          "commitId": "aa97aa7355b5f8475274d3c6ff4443516a908f71ab44c9b6844526bd4ea83d51"
+        },
+        {
+          "generation": 44,
+          "trainBest": 26,
+          "trainMean": 19.8046875,
+          "validation": [],
+          "commitId": "153bb6361442685aa9a433fc2c0c5692de16833a740406392cdcdf5cb4c38b91"
+        },
+        {
+          "generation": 45,
+          "trainBest": 27.333333333333332,
+          "trainMean": 21.091145833333332,
+          "validation": [],
+          "commitId": "8bc726ede818dc85bd3de7bb618dbc93386939efdf986eb77934b2bd83b34dca"
+        },
+        {
+          "generation": 46,
+          "trainBest": 26.666666666666668,
+          "trainMean": 20.229166666666668,
+          "validation": [],
+          "commitId": "8d82d02300187f0c581b0fb1d26ac19c4fc9dc4d39cf15155410c3cd1e248ecc"
+        },
+        {
+          "generation": 47,
+          "trainBest": 27.333333333333332,
+          "trainMean": 21.46875,
+          "validation": [],
+          "commitId": "6d1108e5232a9a406d6178231694387977994027056887ff63b11ef7da18fac9"
+        },
+        {
+          "generation": 48,
+          "trainBest": 27,
+          "trainMean": 20.690104166666668,
+          "validation": [],
+          "commitId": "5589aabff6a6493deaebf09b539fa8a569a73acb22134a83b6c1c34d5c22b2c3"
+        },
+        {
+          "generation": 49,
+          "trainBest": 24.333333333333332,
+          "trainMean": 19.518229166666668,
+          "validation": [
+            21,
+            23,
+            24,
+            21,
+            24,
+            19,
+            26,
+            19,
+            19,
+            25,
+            17,
+            20,
+            27,
+            24,
+            26,
+            21
+          ],
+          "commitId": "07acd814d280ce8014680fd46d70213d89a1439ad31112361a2d2c323a3acdad"
+        }
+      ]
+    },
+    {
+      "run": 1,
+      "definition": {
+        "id": "experiment-pilot-v1-1",
+        "world": {
+          "width": 800,
+          "height": 600,
+          "foodCount": 48,
+          "obstacleCount": 0,
+          "bodyRadius": 8,
+          "foodRadius": 4,
+          "sensorRange": 140,
+          "vMax": 90,
+          "omegaMax": 3.141592653589793,
+          "maxTicks": 1800,
+          "maxEnergy": 100,
+          "foodEnergy": 20
+        },
+        "evolution": {
+          "population": 128,
+          "elites": 4,
+          "immigrants": 8,
+          "trials": 3,
+          "tournamentSize": 4,
+          "mutationProbability": 0.1,
+          "mutationSigma": 0.05,
+          "validationInterval": 10,
+          "validationTrials": 16
+        },
+        "roots": {
+          "initialization": "pilot-v1-1:initialization",
+          "training": "pilot-v1-1:training",
+          "evolution": "pilot-v1-1:evolution",
+          "validation": "pilot-v1-1:validation"
+        }
+      },
+      "initialValidation": 8.5,
+      "finalValidation": 18.6875,
+      "initialNonzeroFraction": 0.8125,
+      "baselines": {
+        "frozenRandom": 0.9375,
+        "randomActions": 0.9375,
+        "scripted": 19.6875
+      },
+      "generationSeconds": {
+        "median": 1.9666081669999984,
+        "p95": 2.3258034170000026
+      },
+      "summaries": [
+        {
+          "generation": 0,
+          "trainBest": 12.666666666666666,
+          "trainMean": 1.3333333333333333,
+          "validation": [],
+          "commitId": "ef80e9de5b6803d17775e60afa5128b324c5687bd5f11bf939151ea6cf81f080"
+        },
+        {
+          "generation": 1,
+          "trainBest": 10.666666666666666,
+          "trainMean": 2.75,
+          "validation": [],
+          "commitId": "299e31b51950ca598a71c9c8812fd0b635c3fded884781e748a0a41ae9b60697"
+        },
+        {
+          "generation": 2,
+          "trainBest": 9.666666666666666,
+          "trainMean": 3.6458333333333335,
+          "validation": [],
+          "commitId": "c6aaf5184a7b6f1f72ed4d1d36b6dab193fde03293ecf1596fe45c98366887b2"
+        },
+        {
+          "generation": 3,
+          "trainBest": 11.333333333333334,
+          "trainMean": 5.6796875,
+          "validation": [],
+          "commitId": "20e63aa3d80294dd208d85795aa92513962b61ca69f66aaf2c646590284d1f86"
+        },
+        {
+          "generation": 4,
+          "trainBest": 12,
+          "trainMean": 7.078125,
+          "validation": [],
+          "commitId": "d89cbc1f05e0513ef83dd99a8eb09bd344991c7e8c65507c24b7057e167497a4"
+        },
+        {
+          "generation": 5,
+          "trainBest": 12.666666666666666,
+          "trainMean": 7.15625,
+          "validation": [],
+          "commitId": "b9aa87fa86f22c3e6f2aced2720a8dda809d89f52d6fc9f2e2b588d72de1f57e"
+        },
+        {
+          "generation": 6,
+          "trainBest": 15,
+          "trainMean": 10.018229166666666,
+          "validation": [],
+          "commitId": "60cbd3f841dbad8d1a3e35679592a8ea123ab02554959c0d85e7f97b6173d19b"
+        },
+        {
+          "generation": 7,
+          "trainBest": 15,
+          "trainMean": 9.106770833333334,
+          "validation": [],
+          "commitId": "b66af1040358dafc5d789a11e2049c28abebfc135dfc6d99348647d133045050"
+        },
+        {
+          "generation": 8,
+          "trainBest": 15.333333333333334,
+          "trainMean": 8.432291666666666,
+          "validation": [],
+          "commitId": "b4984e36caa93511b652985fad86d6627ba5134a078ae287f6681fcc18caed4b"
+        },
+        {
+          "generation": 9,
+          "trainBest": 13.333333333333334,
+          "trainMean": 9.231770833333334,
+          "validation": [
+            10,
+            10,
+            11,
+            7,
+            12,
+            12,
+            9,
+            11,
+            11,
+            14,
+            6,
+            10,
+            6,
+            12,
+            11,
+            13
+          ],
+          "commitId": "0c0a55311d9c2d99a0feb6c1a196463a7cbe5a1d4d97ef6f06abab0d71129ea3"
+        },
+        {
+          "generation": 10,
+          "trainBest": 15.666666666666666,
+          "trainMean": 10.669270833333334,
+          "validation": [],
+          "commitId": "fa8040f5df50f6880e05d053ff39d63a17437fcae4c55bb86b6b771db5e642aa"
+        },
+        {
+          "generation": 11,
+          "trainBest": 14,
+          "trainMean": 10.0703125,
+          "validation": [],
+          "commitId": "6d2c7e840bab603519f987780b6878a5d4070443a93333d35e7ac9a2ad7bba55"
+        },
+        {
+          "generation": 12,
+          "trainBest": 16.333333333333332,
+          "trainMean": 11.270833333333334,
+          "validation": [],
+          "commitId": "3e935ab9a9df5b29597bcae6b68effa7a07330718e49b8c25b27e0e478359674"
+        },
+        {
+          "generation": 13,
+          "trainBest": 17,
+          "trainMean": 9.1640625,
+          "validation": [],
+          "commitId": "1ba3e76cd1631c8bb967cee1d45e55da7247e39de401efade108c3f384bb0ec6"
+        },
+        {
+          "generation": 14,
+          "trainBest": 15.333333333333334,
+          "trainMean": 9.744791666666666,
+          "validation": [],
+          "commitId": "076372a97efd9ab17a6309d2fd7b7a2c286b14ea1e7d0eff2d1a37de1a21dd0f"
+        },
+        {
+          "generation": 15,
+          "trainBest": 14.666666666666666,
+          "trainMean": 10.692708333333334,
+          "validation": [],
+          "commitId": "9cc40a57f18fe359b3a0cf6da8cf1a9bfa01dcad5031be01083178e9234d1700"
+        },
+        {
+          "generation": 16,
+          "trainBest": 18,
+          "trainMean": 12.247395833333334,
+          "validation": [],
+          "commitId": "9179d6fedca6434639ca6529d23cbdaf72f100c10542cdd7993a142d2faaa4d3"
+        },
+        {
+          "generation": 17,
+          "trainBest": 15.666666666666666,
+          "trainMean": 10.330729166666666,
+          "validation": [],
+          "commitId": "a10707aa0567a9eade065b3155766ad751a3f0c33f7d3b20130261c0248a29e5"
+        },
+        {
+          "generation": 18,
+          "trainBest": 18,
+          "trainMean": 11.776041666666666,
+          "validation": [],
+          "commitId": "3a0f26d948986e131e75c696ba981470da0f916c0309ee0fe1bda59a11a9450a"
+        },
+        {
+          "generation": 19,
+          "trainBest": 16.333333333333332,
+          "trainMean": 10.53125,
+          "validation": [
+            15,
+            10,
+            10,
+            12,
+            16,
+            14,
+            12,
+            9,
+            15,
+            10,
+            13,
+            10,
+            8,
+            12,
+            15,
+            7
+          ],
+          "commitId": "70fcd5951e9342db974ffa990110a1b2ba53803ee824bd9d4c669bf7b5e13535"
+        },
+        {
+          "generation": 20,
+          "trainBest": 15,
+          "trainMean": 10.7890625,
+          "validation": [],
+          "commitId": "a78b44ff4d61d7751614ca703dd1cefc773706827e181b74d07ffe513becd484"
+        },
+        {
+          "generation": 21,
+          "trainBest": 17.333333333333332,
+          "trainMean": 11.684895833333334,
+          "validation": [],
+          "commitId": "13cab792c6ec9636097e20c7ed3b0fd478771cb35b97258d4e0542731b60d285"
+        },
+        {
+          "generation": 22,
+          "trainBest": 18,
+          "trainMean": 12.401041666666666,
+          "validation": [],
+          "commitId": "520bbc9fda4efa191b0fc7cc7e67682864468b1746270bbb4b74e9bdfd0ed210"
+        },
+        {
+          "generation": 23,
+          "trainBest": 18,
+          "trainMean": 12.541666666666666,
+          "validation": [],
+          "commitId": "e2580ce3a8c6a2cd1c945df53f9a7eb3beb07a14a8ed5d798d13c4c00c338a3e"
+        },
+        {
+          "generation": 24,
+          "trainBest": 17.333333333333332,
+          "trainMean": 13.0234375,
+          "validation": [],
+          "commitId": "d2982f468e5464fd3759af9964f851fa75604b8617a91d50db63109d35d38e56"
+        },
+        {
+          "generation": 25,
+          "trainBest": 18.333333333333332,
+          "trainMean": 12.270833333333334,
+          "validation": [],
+          "commitId": "bbbbe15d055b226e768c56363e3566323e49377131f532d9da079286de451224"
+        },
+        {
+          "generation": 26,
+          "trainBest": 20.333333333333332,
+          "trainMean": 12.752604166666666,
+          "validation": [],
+          "commitId": "05ed938c4bcc58cba07b492fc19a0e73e82dd8219683f51f0a62e3631f185670"
+        },
+        {
+          "generation": 27,
+          "trainBest": 17,
+          "trainMean": 11.953125,
+          "validation": [],
+          "commitId": "e0a0c53a013ef7e54932a6a36e6edde87ec253b8c84f3e52c71d1fe25c45a690"
+        },
+        {
+          "generation": 28,
+          "trainBest": 18.333333333333332,
+          "trainMean": 14.049479166666666,
+          "validation": [],
+          "commitId": "e2a0d7c3d01145dfbc77ec143e51ec1a5860f088aab3bac27991cf1c11fd41f0"
+        },
+        {
+          "generation": 29,
+          "trainBest": 17.333333333333332,
+          "trainMean": 13.6328125,
+          "validation": [
+            15,
+            14,
+            18,
+            8,
+            24,
+            17,
+            13,
+            17,
+            17,
+            18,
+            12,
+            10,
+            10,
+            17,
+            14,
+            10
+          ],
+          "commitId": "b9000c0bceaa85fce022ef9d821cc69329b4d8849e1c5cdc1f9a0e7d8ae1cc05"
+        },
+        {
+          "generation": 30,
+          "trainBest": 18.666666666666668,
+          "trainMean": 13.354166666666666,
+          "validation": [],
+          "commitId": "b8c842447d5620322c0879892fdfe505d224a5c3b0a1cd31206128193f2f3412"
+        },
+        {
+          "generation": 31,
+          "trainBest": 21,
+          "trainMean": 14.90625,
+          "validation": [],
+          "commitId": "70553ae6782bb82c0bf55d47fd7ce9affeb0da7fa0f4c5bf8b87aa17b27ee579"
+        },
+        {
+          "generation": 32,
+          "trainBest": 18.666666666666668,
+          "trainMean": 13.177083333333334,
+          "validation": [],
+          "commitId": "21af9767a7d3d9be167ee88826a714b8afaebb26fcd92b7be91ff6795ce34bbf"
+        },
+        {
+          "generation": 33,
+          "trainBest": 21,
+          "trainMean": 15.6953125,
+          "validation": [],
+          "commitId": "6a6bc8946fc51d5517d9c2f9143a431cd619c4114daa4d61f5853d7b0ca7e695"
+        },
+        {
+          "generation": 34,
+          "trainBest": 20.666666666666668,
+          "trainMean": 13.875,
+          "validation": [],
+          "commitId": "b0995916c6ab2558d06c152161b6ba47391f0fb7a030269931233e9d407ad6f6"
+        },
+        {
+          "generation": 35,
+          "trainBest": 19,
+          "trainMean": 14.5,
+          "validation": [],
+          "commitId": "7efa21968961ac4faea0d4fece65ea5300fed20438bc81849cef206f51ea8bfc"
+        },
+        {
+          "generation": 36,
+          "trainBest": 19.666666666666668,
+          "trainMean": 14.236979166666666,
+          "validation": [],
+          "commitId": "269afc7a587368de6e04ddf81ea773c827a4d1f932befe28ae82163dda0de6d8"
+        },
+        {
+          "generation": 37,
+          "trainBest": 23,
+          "trainMean": 16.2734375,
+          "validation": [],
+          "commitId": "2fcdccf3ec934a676d674f6cf9cff9d85077a289277a52d0233420f9712b9e98"
+        },
+        {
+          "generation": 38,
+          "trainBest": 20.333333333333332,
+          "trainMean": 16.1640625,
+          "validation": [],
+          "commitId": "8a871c86717d972735ab599f58b891fbd1674469ee62cb244eeba9bd1bbe2a11"
+        },
+        {
+          "generation": 39,
+          "trainBest": 20.666666666666668,
+          "trainMean": 16.5390625,
+          "validation": [
+            13,
+            18,
+            15,
+            15,
+            21,
+            20,
+            13,
+            15,
+            20,
+            17,
+            15,
+            13,
+            11,
+            16,
+            16,
+            16
+          ],
+          "commitId": "012e08e248f06effe3a619840dd685affbc283de39daa317b3771148d0920112"
+        },
+        {
+          "generation": 40,
+          "trainBest": 23.333333333333332,
+          "trainMean": 15.8359375,
+          "validation": [],
+          "commitId": "e3c79044a8a7246376af17bfa5bfd12edfcd2fdbe7f21f049cb856015f2c7040"
+        },
+        {
+          "generation": 41,
+          "trainBest": 24.333333333333332,
+          "trainMean": 17.421875,
+          "validation": [],
+          "commitId": "0aa6dc3d0c1c087abc543b3e8151a7236a9e09a54e101a9feb8cd29f7db324a5"
+        },
+        {
+          "generation": 42,
+          "trainBest": 22.333333333333332,
+          "trainMean": 15.942708333333334,
+          "validation": [],
+          "commitId": "eaebeca09dcf4acba527230efee9bbfb3f10f5c86d03cc3fb677a94dc545ebec"
+        },
+        {
+          "generation": 43,
+          "trainBest": 19,
+          "trainMean": 14.734375,
+          "validation": [],
+          "commitId": "8883f30d47ddc392e4a8f955b0d76f1fdae56bd4d234b6f5e3fe3e9741ab31e0"
+        },
+        {
+          "generation": 44,
+          "trainBest": 21,
+          "trainMean": 14.903645833333334,
+          "validation": [],
+          "commitId": "ad762acbe50fdddb9dd476b169a58ae3d075efd9663e90b369ea9896f7cec3da"
+        },
+        {
+          "generation": 45,
+          "trainBest": 20,
+          "trainMean": 15.3203125,
+          "validation": [],
+          "commitId": "29cce595f007b949c87a179c1fef8a58479716bbb916534d3e4c18b27b0afb9c"
+        },
+        {
+          "generation": 46,
+          "trainBest": 22.666666666666668,
+          "trainMean": 16.177083333333332,
+          "validation": [],
+          "commitId": "09164611ed351160c5033ef88565e45125f233a845ebdb9e321a140d8588b87a"
+        },
+        {
+          "generation": 47,
+          "trainBest": 22.333333333333332,
+          "trainMean": 16.786458333333332,
+          "validation": [],
+          "commitId": "f3882758b3151237a73c01385afbb7c80ed14c1b43bedd125ca2cf849ad31639"
+        },
+        {
+          "generation": 48,
+          "trainBest": 21.666666666666668,
+          "trainMean": 16.421875,
+          "validation": [],
+          "commitId": "a14d6b469b524cc75d3ba80d044a7088a51b707e170a3d542b2f2bab14b92330"
+        },
+        {
+          "generation": 49,
+          "trainBest": 23.333333333333332,
+          "trainMean": 17.229166666666668,
+          "validation": [
+            13,
+            14,
+            18,
+            17,
+            22,
+            25,
+            21,
+            20,
+            21,
+            21,
+            20,
+            20,
+            16,
+            19,
+            16,
+            16
+          ],
+          "commitId": "b724e318fa7fd387f8cdf12d87507172120b896eea591df867834242a1a77c25"
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "definition": {
+        "id": "experiment-pilot-v1-2",
+        "world": {
+          "width": 800,
+          "height": 600,
+          "foodCount": 48,
+          "obstacleCount": 0,
+          "bodyRadius": 8,
+          "foodRadius": 4,
+          "sensorRange": 140,
+          "vMax": 90,
+          "omegaMax": 3.141592653589793,
+          "maxTicks": 1800,
+          "maxEnergy": 100,
+          "foodEnergy": 20
+        },
+        "evolution": {
+          "population": 128,
+          "elites": 4,
+          "immigrants": 8,
+          "trials": 3,
+          "tournamentSize": 4,
+          "mutationProbability": 0.1,
+          "mutationSigma": 0.05,
+          "validationInterval": 10,
+          "validationTrials": 16
+        },
+        "roots": {
+          "initialization": "pilot-v1-2:initialization",
+          "training": "pilot-v1-2:training",
+          "evolution": "pilot-v1-2:evolution",
+          "validation": "pilot-v1-2:validation"
+        }
+      },
+      "initialValidation": 5.75,
+      "finalValidation": 20,
+      "initialNonzeroFraction": 0.8203125,
+      "baselines": {
+        "frozenRandom": 1.0625,
+        "randomActions": 0.375,
+        "scripted": 25.875
+      },
+      "generationSeconds": {
+        "median": 1.895070875000034,
+        "p95": 2.023107665999996
+      },
+      "summaries": [
+        {
+          "generation": 0,
+          "trainBest": 8.666666666666666,
+          "trainMean": 1.328125,
+          "validation": [],
+          "commitId": "0756f87a0c1c1b7865fa20218fa2dba4f8d0ba655e016b6a05aaf12ca7731bec"
+        },
+        {
+          "generation": 1,
+          "trainBest": 11.333333333333334,
+          "trainMean": 3.0182291666666665,
+          "validation": [],
+          "commitId": "0ceb0ed4d53248016dead58ac1645276a54e46731c8a1be875fcf3431c6c4502"
+        },
+        {
+          "generation": 2,
+          "trainBest": 12.666666666666666,
+          "trainMean": 4.479166666666667,
+          "validation": [],
+          "commitId": "1981cba4de18088e919b7fecc60e8777c58ed99b7371d42f4e4ffb7ee9cd6819"
+        },
+        {
+          "generation": 3,
+          "trainBest": 15.333333333333334,
+          "trainMean": 6.619791666666667,
+          "validation": [],
+          "commitId": "7043aaabd94e24f0f6ac501fb61b86f3e2872f1ff00a0edce50da7f3962b9ff1"
+        },
+        {
+          "generation": 4,
+          "trainBest": 16,
+          "trainMean": 9.697916666666666,
+          "validation": [],
+          "commitId": "2dbfdffcf88f69f7a1ee430862ce323a64f2a1dac3831163f70646c76f7e94ea"
+        },
+        {
+          "generation": 5,
+          "trainBest": 18.333333333333332,
+          "trainMean": 12.854166666666666,
+          "validation": [],
+          "commitId": "06fcdcd57cc695c4dd4abe2210150310d7f67f6e6c3a01b3b67aea66e5b11148"
+        },
+        {
+          "generation": 6,
+          "trainBest": 16.333333333333332,
+          "trainMean": 10.846354166666666,
+          "validation": [],
+          "commitId": "8f10c4f769e49aacaa747501565e815744d537a4357e0eaf3df2e9bf44c59e8c"
+        },
+        {
+          "generation": 7,
+          "trainBest": 16.666666666666668,
+          "trainMean": 11.205729166666666,
+          "validation": [],
+          "commitId": "676ac64b902b743b98fc6d03c1029e016ac6c3972bf9a7390b88b5d1e2ecc594"
+        },
+        {
+          "generation": 8,
+          "trainBest": 16.333333333333332,
+          "trainMean": 10.684895833333334,
+          "validation": [],
+          "commitId": "0760c11e665f91b1f80fd743156157b2f27b01f8b6e3df6c7573b1e84417c125"
+        },
+        {
+          "generation": 9,
+          "trainBest": 18.333333333333332,
+          "trainMean": 13.192708333333334,
+          "validation": [
+            8,
+            14,
+            14,
+            15,
+            12,
+            7,
+            7,
+            18,
+            15,
+            17,
+            4,
+            12,
+            9,
+            16,
+            7,
+            16
+          ],
+          "commitId": "fc89e7582647f72a612404f0c660bfaa7dbd330d7b68343097ac5cb4b43aad94"
+        },
+        {
+          "generation": 10,
+          "trainBest": 16.666666666666668,
+          "trainMean": 11.018229166666666,
+          "validation": [],
+          "commitId": "3808776d607c10f9af8ce1232bf32139107623098e27e18554308f06adb4d469"
+        },
+        {
+          "generation": 11,
+          "trainBest": 19.666666666666668,
+          "trainMean": 12.4921875,
+          "validation": [],
+          "commitId": "03adc4c666f200aad9058af38794379a1e2b17f4fe2c3427c602aeae13d7713e"
+        },
+        {
+          "generation": 12,
+          "trainBest": 16.666666666666668,
+          "trainMean": 11.338541666666666,
+          "validation": [],
+          "commitId": "b2692e62100cbcc15e3e9d8ffe8935f9684e6f9789f54fc6540b712ddbc8d1bf"
+        },
+        {
+          "generation": 13,
+          "trainBest": 19.666666666666668,
+          "trainMean": 12.927083333333334,
+          "validation": [],
+          "commitId": "cdfbaac7cab3fddba4ed4f705c0c06301e17f2ffe1feae4ca2e8293d6cc2d075"
+        },
+        {
+          "generation": 14,
+          "trainBest": 19.333333333333332,
+          "trainMean": 13.7421875,
+          "validation": [],
+          "commitId": "710b7afc5182e2a6a81a2aa6f7ba3e80521affcc5c3ea83196ada23f4de0fb75"
+        },
+        {
+          "generation": 15,
+          "trainBest": 21,
+          "trainMean": 13.481770833333334,
+          "validation": [],
+          "commitId": "8adcc8cd397b35cff0dc7cdd495296f6c52831180b7ed6c7c3ee84c5fc748d90"
+        },
+        {
+          "generation": 16,
+          "trainBest": 21.333333333333332,
+          "trainMean": 13.434895833333334,
+          "validation": [],
+          "commitId": "59863e0fdeb0f97cfa8857187c6b8c5f4c6097ec0a494b1abf8a260c0ef75644"
+        },
+        {
+          "generation": 17,
+          "trainBest": 20,
+          "trainMean": 14.5234375,
+          "validation": [],
+          "commitId": "e1e2f251020a936f4199fbf1f6fa488b280178bf4c2a7d29fba76d995d0884b2"
+        },
+        {
+          "generation": 18,
+          "trainBest": 18.333333333333332,
+          "trainMean": 14.010416666666666,
+          "validation": [],
+          "commitId": "513992617443eddb4d148682cf1fe8a41d71b783c27cd2602f9f1869aac0024d"
+        },
+        {
+          "generation": 19,
+          "trainBest": 20.666666666666668,
+          "trainMean": 15.135416666666666,
+          "validation": [
+            17,
+            18,
+            17,
+            17,
+            14,
+            20,
+            22,
+            17,
+            16,
+            18,
+            16,
+            14,
+            10,
+            18,
+            17,
+            20
+          ],
+          "commitId": "7f7a422c5e5d0e4d97da967c03620dfa34c79bc6337091d4820500cb48899eb0"
+        },
+        {
+          "generation": 20,
+          "trainBest": 22.333333333333332,
+          "trainMean": 16.270833333333332,
+          "validation": [],
+          "commitId": "d1c1dec87b4f28d291917c64a91b2b6cd16a7e7aa683aca2b9aca0a78277b668"
+        },
+        {
+          "generation": 21,
+          "trainBest": 20,
+          "trainMean": 15.174479166666666,
+          "validation": [],
+          "commitId": "1304658dfd90e9631b619756842579b14e09b6c12011da5bf9a60f910d32d84b"
+        },
+        {
+          "generation": 22,
+          "trainBest": 22.666666666666668,
+          "trainMean": 16.481770833333332,
+          "validation": [],
+          "commitId": "bf3ed804020f9e9f2c9623ee53ce0c33bef627d791ffb1d27c513473d2b407b3"
+        },
+        {
+          "generation": 23,
+          "trainBest": 22.666666666666668,
+          "trainMean": 15.28125,
+          "validation": [],
+          "commitId": "04de37b6f1379d8ddb3561d2f1bff41e13d58c1aa9926fa39237dddbfcfb9de7"
+        },
+        {
+          "generation": 24,
+          "trainBest": 21,
+          "trainMean": 14.875,
+          "validation": [],
+          "commitId": "2cfae667598bcf4622e426c532b9d9efb7d8312d489c136efcf9abaca3a635a7"
+        },
+        {
+          "generation": 25,
+          "trainBest": 21.666666666666668,
+          "trainMean": 15.403645833333334,
+          "validation": [],
+          "commitId": "bf8f7dc829a8216fe91e7f0cf884b64d857c4b7373f85d35042fdaff01945814"
+        },
+        {
+          "generation": 26,
+          "trainBest": 24,
+          "trainMean": 17.5390625,
+          "validation": [],
+          "commitId": "d48399e6300bfe5d93c80705199f10ff9e2041b4af346ffcc4b550b9f8ed4b46"
+        },
+        {
+          "generation": 27,
+          "trainBest": 21,
+          "trainMean": 15.1015625,
+          "validation": [],
+          "commitId": "e8d1e9e8456227c9e1d83fb0044d4960a513ac22cc4a383890e4c3ce8c7f3880"
+        },
+        {
+          "generation": 28,
+          "trainBest": 22,
+          "trainMean": 16.497395833333332,
+          "validation": [],
+          "commitId": "73452fbdd2a857f220f4bdb711a6d82319db526176e9909a260434410e9c4d01"
+        },
+        {
+          "generation": 29,
+          "trainBest": 22,
+          "trainMean": 16.026041666666668,
+          "validation": [
+            21,
+            20,
+            19,
+            17,
+            16,
+            21,
+            18,
+            20,
+            16,
+            18,
+            14,
+            20,
+            10,
+            14,
+            17,
+            17
+          ],
+          "commitId": "0dca7d571f7484143674967d9c9d89de3ade4227e7532fd4523492a5005b1ebd"
+        },
+        {
+          "generation": 30,
+          "trainBest": 23,
+          "trainMean": 17.106770833333332,
+          "validation": [],
+          "commitId": "8ab371bffec9a07667f367e6c467d57e3dd10a4bb533c9f2db493f5bfcb0692d"
+        },
+        {
+          "generation": 31,
+          "trainBest": 24.666666666666668,
+          "trainMean": 17.231770833333332,
+          "validation": [],
+          "commitId": "bbb7017eb00b5694ac06cad1cd5a75a0d8da5c2eb9d0c4b8b297e7ad672432db"
+        },
+        {
+          "generation": 32,
+          "trainBest": 22.333333333333332,
+          "trainMean": 15.739583333333334,
+          "validation": [],
+          "commitId": "8a0e866a43c2ad1ff5f4eff6a9ef174dec0afbeb040ff1d10a0db69d1b981110"
+        },
+        {
+          "generation": 33,
+          "trainBest": 22.666666666666668,
+          "trainMean": 16.2265625,
+          "validation": [],
+          "commitId": "a254e82c7127577873804b46ab3a9c50e4cd58468623bdc021572b2574635306"
+        },
+        {
+          "generation": 34,
+          "trainBest": 24.333333333333332,
+          "trainMean": 17.697916666666668,
+          "validation": [],
+          "commitId": "2429c9fac82d1c8692be130cf40332ba72e204ef7020d409d09e53d030ff1bc8"
+        },
+        {
+          "generation": 35,
+          "trainBest": 20.666666666666668,
+          "trainMean": 15.765625,
+          "validation": [],
+          "commitId": "8c896bb62ca3024f3e608682796788cba9235c81cb0c0c1132ec7b2f4b7aa75a"
+        },
+        {
+          "generation": 36,
+          "trainBest": 23.666666666666668,
+          "trainMean": 18.0859375,
+          "validation": [],
+          "commitId": "91596a47d965a7f34b3e3b41f28163532ab14502e6c58546177d9989d739f105"
+        },
+        {
+          "generation": 37,
+          "trainBest": 22,
+          "trainMean": 16.018229166666668,
+          "validation": [],
+          "commitId": "3d000f21662b1993a5dca995ef6bbda412c6dc27f5097f481c8917b055479435"
+        },
+        {
+          "generation": 38,
+          "trainBest": 23.333333333333332,
+          "trainMean": 17.166666666666668,
+          "validation": [],
+          "commitId": "9bd316902f9a7adae646bf2355d89ad7d636e2c5c4ee198a78516357806435fc"
+        },
+        {
+          "generation": 39,
+          "trainBest": 24.666666666666668,
+          "trainMean": 18.169270833333332,
+          "validation": [
+            15,
+            20,
+            14,
+            19,
+            17,
+            20,
+            18,
+            22,
+            23,
+            16,
+            18,
+            22,
+            20,
+            17,
+            17,
+            18
+          ],
+          "commitId": "d07007ad65fa2dfda705024df7bcac6503fefc4b8e459b721bb931b11b31e93e"
+        },
+        {
+          "generation": 40,
+          "trainBest": 23.666666666666668,
+          "trainMean": 18.018229166666668,
+          "validation": [],
+          "commitId": "6c726a930a6ede1c6c5620ab8e9b9f686b0748a01781d16ad66a3c1ff541c1b6"
+        },
+        {
+          "generation": 41,
+          "trainBest": 25.666666666666668,
+          "trainMean": 19.895833333333332,
+          "validation": [],
+          "commitId": "043f108e2e048e8a758574914beb9389125ca28d78297fe61354b94e00841602"
+        },
+        {
+          "generation": 42,
+          "trainBest": 24,
+          "trainMean": 18.2734375,
+          "validation": [],
+          "commitId": "b8ad32f51a50a33eccce1868907d33f6c35cabc4bb32fdbed0f8951c373209ae"
+        },
+        {
+          "generation": 43,
+          "trainBest": 23.666666666666668,
+          "trainMean": 17.908854166666668,
+          "validation": [],
+          "commitId": "3d8977b4069ae79b56e7e39073dde4661c3f9e55660732cb900c5ce97fd1c4d1"
+        },
+        {
+          "generation": 44,
+          "trainBest": 24.333333333333332,
+          "trainMean": 18.734375,
+          "validation": [],
+          "commitId": "41ad5d6865b230362b3699422f38ba6fe7fdd46599767267a25edf27b882e523"
+        },
+        {
+          "generation": 45,
+          "trainBest": 24.333333333333332,
+          "trainMean": 18.440104166666668,
+          "validation": [],
+          "commitId": "e99a0ae802aa141cead60229b6e94e6f8b93dbd4b247ec5c315e7014aa21883a"
+        },
+        {
+          "generation": 46,
+          "trainBest": 25,
+          "trainMean": 19.255208333333332,
+          "validation": [],
+          "commitId": "54dbf40ec21004c63949b1a38d0dd7f2b350a0087de896dc3c1a010654b985d7"
+        },
+        {
+          "generation": 47,
+          "trainBest": 24.666666666666668,
+          "trainMean": 19.53125,
+          "validation": [],
+          "commitId": "a083e318d2d6293fbf9b5cb2d8753bb806002d9b61399da8abb1f04cb54b0e2e"
+        },
+        {
+          "generation": 48,
+          "trainBest": 24,
+          "trainMean": 18.8828125,
+          "validation": [],
+          "commitId": "9b4081417cf47064cbaae0dbd2f5b8660e02d58f8bf55592d3856e62963e50c9"
+        },
+        {
+          "generation": 49,
+          "trainBest": 26.333333333333332,
+          "trainMean": 19.145833333333332,
+          "validation": [
+            23,
+            21,
+            20,
+            24,
+            19,
+            15,
+            16,
+            24,
+            23,
+            18,
+            24,
+            15,
+            12,
+            22,
+            22,
+            22
+          ],
+          "commitId": "f5634bf9e139ae583f51627a7f3de45b16aa7d35ca90026b00f2cf3dd808bbb3"
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "definition": {
+        "id": "experiment-pilot-v1-3",
+        "world": {
+          "width": 800,
+          "height": 600,
+          "foodCount": 48,
+          "obstacleCount": 0,
+          "bodyRadius": 8,
+          "foodRadius": 4,
+          "sensorRange": 140,
+          "vMax": 90,
+          "omegaMax": 3.141592653589793,
+          "maxTicks": 1800,
+          "maxEnergy": 100,
+          "foodEnergy": 20
+        },
+        "evolution": {
+          "population": 128,
+          "elites": 4,
+          "immigrants": 8,
+          "trials": 3,
+          "tournamentSize": 4,
+          "mutationProbability": 0.1,
+          "mutationSigma": 0.05,
+          "validationInterval": 10,
+          "validationTrials": 16
+        },
+        "roots": {
+          "initialization": "pilot-v1-3:initialization",
+          "training": "pilot-v1-3:training",
+          "evolution": "pilot-v1-3:evolution",
+          "validation": "pilot-v1-3:validation"
+        }
+      },
+      "initialValidation": 3.8125,
+      "finalValidation": 25.8125,
+      "initialNonzeroFraction": 0.8046875,
+      "baselines": {
+        "frozenRandom": 0.3125,
+        "randomActions": 0.3125,
+        "scripted": 27.25
+      },
+      "generationSeconds": {
+        "median": 1.839831292000017,
+        "p95": 2.19622320899996
+      },
+      "summaries": [
+        {
+          "generation": 0,
+          "trainBest": 7.666666666666667,
+          "trainMean": 1.4114583333333333,
+          "validation": [],
+          "commitId": "f7689827fa317e04eed362ea7c978771373c7f87be451cdf46f0b63903bffca1"
+        },
+        {
+          "generation": 1,
+          "trainBest": 8.333333333333334,
+          "trainMean": 2.796875,
+          "validation": [],
+          "commitId": "3753139c392d880e2ccb92dafed47134f1bb20736f9414f5c2555a3e892b3f57"
+        },
+        {
+          "generation": 2,
+          "trainBest": 10,
+          "trainMean": 3.6354166666666665,
+          "validation": [],
+          "commitId": "4de415773618d5c898a2ac9603d5461d5c76afc508799d34ef92877e556fd135"
+        },
+        {
+          "generation": 3,
+          "trainBest": 13.333333333333334,
+          "trainMean": 4.145833333333333,
+          "validation": [],
+          "commitId": "f4b0a38593cc708c52975926976fab06662c59be535606e50dc24d5b4742765c"
+        },
+        {
+          "generation": 4,
+          "trainBest": 17.333333333333332,
+          "trainMean": 5.002604166666667,
+          "validation": [],
+          "commitId": "fa14dff35db788ad5777df98f95399f27523d996ea3dd93fa644e05fda523e4b"
+        },
+        {
+          "generation": 5,
+          "trainBest": 16,
+          "trainMean": 7.354166666666667,
+          "validation": [],
+          "commitId": "00a2c0e6c173ba9650c41d97797c660a0bfa87ac8322709441a4a4410dc01fcf"
+        },
+        {
+          "generation": 6,
+          "trainBest": 18.333333333333332,
+          "trainMean": 8.703125,
+          "validation": [],
+          "commitId": "6eba0984fc088378ec117f930718b34bcdc015d71b92583eef0de13d6aba97fa"
+        },
+        {
+          "generation": 7,
+          "trainBest": 18.333333333333332,
+          "trainMean": 10.421875,
+          "validation": [],
+          "commitId": "305a8d7de67f83617cbfaae3b0d2461e70229b768b359ce50c7c5a6ddebac84c"
+        },
+        {
+          "generation": 8,
+          "trainBest": 19.666666666666668,
+          "trainMean": 9.317708333333334,
+          "validation": [],
+          "commitId": "af1b1fa951ae0db7f6aa21e8033a69e5f7608505ab435eba46d588ad956d1761"
+        },
+        {
+          "generation": 9,
+          "trainBest": 20.333333333333332,
+          "trainMean": 13.645833333333334,
+          "validation": [
+            17,
+            20,
+            5,
+            14,
+            8,
+            21,
+            10,
+            9,
+            19,
+            22,
+            16,
+            22,
+            20,
+            23,
+            19,
+            15
+          ],
+          "commitId": "56246b95a4d1ae8f88137c1b39c25cb39aca40372f5c7c6cbe5a32fa76173348"
+        },
+        {
+          "generation": 10,
+          "trainBest": 21.666666666666668,
+          "trainMean": 14.263020833333334,
+          "validation": [],
+          "commitId": "3da82f7271afc7edc422353b227debe5e1101c6343a17bcde2fc199c6e89516c"
+        },
+        {
+          "generation": 11,
+          "trainBest": 22.666666666666668,
+          "trainMean": 14.825520833333334,
+          "validation": [],
+          "commitId": "a42897b4d733dacaf2dcbb68415d37da22bd350e6b089630757680e542ebe100"
+        },
+        {
+          "generation": 12,
+          "trainBest": 24.333333333333332,
+          "trainMean": 17.075520833333332,
+          "validation": [],
+          "commitId": "2a528d69714a73ac11c2cc3f2c6649476fc0d788e31a8693e88416f2afaaa496"
+        },
+        {
+          "generation": 13,
+          "trainBest": 24.666666666666668,
+          "trainMean": 17.7734375,
+          "validation": [],
+          "commitId": "1371ef4dc443a35b4fbb2e99a253db862a89c2a8e608bdfeda612c98cb5952ea"
+        },
+        {
+          "generation": 14,
+          "trainBest": 25.333333333333332,
+          "trainMean": 18.067708333333332,
+          "validation": [],
+          "commitId": "45ff1e0ebc20705cc775928f3398ea9e9b619b363087df58577d9b20d964f355"
+        },
+        {
+          "generation": 15,
+          "trainBest": 23.666666666666668,
+          "trainMean": 18.231770833333332,
+          "validation": [],
+          "commitId": "ef80eadd16ab88fe9172b5ceb15331aea2ebfe0a0defa3c4304852b69c9ccbb8"
+        },
+        {
+          "generation": 16,
+          "trainBest": 27,
+          "trainMean": 17.049479166666668,
+          "validation": [],
+          "commitId": "ecc528d7701d9247c5dc30ed568937cf3ee7f9226b7f8cbc3eebdb49b753ecb9"
+        },
+        {
+          "generation": 17,
+          "trainBest": 26.333333333333332,
+          "trainMean": 19,
+          "validation": [],
+          "commitId": "e609182f5b3fd658b7ab9f96c983376d9b76307b2b6ae9e33d01071876b4ed43"
+        },
+        {
+          "generation": 18,
+          "trainBest": 26.666666666666668,
+          "trainMean": 19.591145833333332,
+          "validation": [],
+          "commitId": "032a3940444d41ce6226697c47aa131f3dd0b5ab05f3374555af7dda439dc7c1"
+        },
+        {
+          "generation": 19,
+          "trainBest": 26,
+          "trainMean": 19.919270833333332,
+          "validation": [
+            26,
+            22,
+            22,
+            18,
+            30,
+            19,
+            22,
+            21,
+            25,
+            26,
+            25,
+            25,
+            20,
+            23,
+            23,
+            23
+          ],
+          "commitId": "389e8ca9414ee4cf591b7af8efb6832bd37808822448e62727b801c5a2fa6501"
+        },
+        {
+          "generation": 20,
+          "trainBest": 25.333333333333332,
+          "trainMean": 19.973958333333332,
+          "validation": [],
+          "commitId": "563b36ba84c359e42346180eadc5da33361238b81c8b76cc90eec3b5c86b30b8"
+        },
+        {
+          "generation": 21,
+          "trainBest": 25.333333333333332,
+          "trainMean": 19.052083333333332,
+          "validation": [],
+          "commitId": "18e9cd9e83db0f794c2b5716d3d17f0b3ddcc24898a90267f9506f8b1110b66b"
+        },
+        {
+          "generation": 22,
+          "trainBest": 26,
+          "trainMean": 20.1953125,
+          "validation": [],
+          "commitId": "a8cd5155437aa50f11f3ed31e5fe668b1b86e7a8ab06c539b9f91bdf8733da14"
+        },
+        {
+          "generation": 23,
+          "trainBest": 26.333333333333332,
+          "trainMean": 20.109375,
+          "validation": [],
+          "commitId": "a0170531e634959716be70afa74f9309016a154cbc084c9745a93b50d358bcc2"
+        },
+        {
+          "generation": 24,
+          "trainBest": 28.666666666666668,
+          "trainMean": 21.177083333333332,
+          "validation": [],
+          "commitId": "e07c52a4bbddc6625929c37e5a7ac2ee0c86404f7b3cb054a25c70733ae58a9c"
+        },
+        {
+          "generation": 25,
+          "trainBest": 25.333333333333332,
+          "trainMean": 19.78125,
+          "validation": [],
+          "commitId": "acedd387e921109862954f3b72136dfe0f9d7ece6ed1b5f5651b7a7a8609e6c4"
+        },
+        {
+          "generation": 26,
+          "trainBest": 26.666666666666668,
+          "trainMean": 20.450520833333332,
+          "validation": [],
+          "commitId": "cf474fcb066ce38860184cb37781dd77dfa088d03614234c52b640791df1ca7f"
+        },
+        {
+          "generation": 27,
+          "trainBest": 25.666666666666668,
+          "trainMean": 18.888020833333332,
+          "validation": [],
+          "commitId": "3f809392d371b708937998be0bb37c368a06de19db121fd47962e1675d2f35c3"
+        },
+        {
+          "generation": 28,
+          "trainBest": 27,
+          "trainMean": 21.890625,
+          "validation": [],
+          "commitId": "3244c01a570703388ef6678c0056fb3178d9738606ad402cb7eb749006ba6cdb"
+        },
+        {
+          "generation": 29,
+          "trainBest": 27.333333333333332,
+          "trainMean": 20.346354166666668,
+          "validation": [
+            24,
+            24,
+            24,
+            24,
+            25,
+            23,
+            20,
+            27,
+            24,
+            26,
+            27,
+            25,
+            24,
+            22,
+            22,
+            19
+          ],
+          "commitId": "307c6801a21f616d8ce8b1bdb5f251f81ef3bcd7ac438488ff845f828e05a271"
+        },
+        {
+          "generation": 30,
+          "trainBest": 28.333333333333332,
+          "trainMean": 20.75,
+          "validation": [],
+          "commitId": "6195a90bb59616d755d8b9089cf40b935427aa90186d42ee6db0e009c8e45521"
+        },
+        {
+          "generation": 31,
+          "trainBest": 28.333333333333332,
+          "trainMean": 20.953125,
+          "validation": [],
+          "commitId": "63bbad36c3906084ba9592e0af6e5f808dc6a175f07907e502a51bae9d6c960f"
+        },
+        {
+          "generation": 32,
+          "trainBest": 25.666666666666668,
+          "trainMean": 20.825520833333332,
+          "validation": [],
+          "commitId": "635060b6283ea31262f8954d4011cd458a8b683d38b6445fbd5e6e972c0e10b0"
+        },
+        {
+          "generation": 33,
+          "trainBest": 29.333333333333332,
+          "trainMean": 22.455729166666668,
+          "validation": [],
+          "commitId": "36d428c4c28b13c322ec7a5f36d918d8f764f881fad5a01b73a8ac2b4fd71917"
+        },
+        {
+          "generation": 34,
+          "trainBest": 29.666666666666668,
+          "trainMean": 23.752604166666668,
+          "validation": [],
+          "commitId": "8fda3f0b575bb533b1b69c11015e0443cf76fc6842cba1700bc6bee23ab2db20"
+        },
+        {
+          "generation": 35,
+          "trainBest": 27,
+          "trainMean": 20.5625,
+          "validation": [],
+          "commitId": "64437bdd818eb76e8980fd72830caa198bb68b02ae1960ca8b8df6876203911e"
+        },
+        {
+          "generation": 36,
+          "trainBest": 28,
+          "trainMean": 22.1796875,
+          "validation": [],
+          "commitId": "826ae4a7641eb1bedad1074915d9f87058857d1cb4530b8a991b9f6ce40c388b"
+        },
+        {
+          "generation": 37,
+          "trainBest": 30.333333333333332,
+          "trainMean": 22.96875,
+          "validation": [],
+          "commitId": "04b71b7a37ef7317a02fd8f7c979b943fb603fcdcde59248d3496ff2e1a96e4b"
+        },
+        {
+          "generation": 38,
+          "trainBest": 27.666666666666668,
+          "trainMean": 21.127604166666668,
+          "validation": [],
+          "commitId": "1d41f6a651344bb5806a945b918903937a4c4daf7a614ff4122b52dd57a61f6b"
+        },
+        {
+          "generation": 39,
+          "trainBest": 27.333333333333332,
+          "trainMean": 21.427083333333332,
+          "validation": [
+            27,
+            25,
+            27,
+            18,
+            26,
+            19,
+            24,
+            24,
+            28,
+            22,
+            26,
+            29,
+            22,
+            23,
+            25,
+            26
+          ],
+          "commitId": "97c4f98acbce950ff9be8a25352214b9cfa2ac1d603301742a89fc529ac6f1a1"
+        },
+        {
+          "generation": 40,
+          "trainBest": 29.666666666666668,
+          "trainMean": 22.463541666666668,
+          "validation": [],
+          "commitId": "14dcf6c9c015126c440361c014505f0481a054cc9fda3c39d2971e4e3aa88dbb"
+        },
+        {
+          "generation": 41,
+          "trainBest": 30,
+          "trainMean": 22.869791666666668,
+          "validation": [],
+          "commitId": "c9176400ed9d1e57b0f577ea1a84aecb5228b423d825b1f0995df02cc943c9f1"
+        },
+        {
+          "generation": 42,
+          "trainBest": 27.666666666666668,
+          "trainMean": 21.278645833333332,
+          "validation": [],
+          "commitId": "e73ddf62d9e7d88dabc1a8f00d2e2a6e77512d0a1a6c3ab358320b1fcc9291e7"
+        },
+        {
+          "generation": 43,
+          "trainBest": 29,
+          "trainMean": 23.1640625,
+          "validation": [],
+          "commitId": "9235c2387ba34230033a114f11458619e01240b8f6006db7c9b150373df0858b"
+        },
+        {
+          "generation": 44,
+          "trainBest": 28,
+          "trainMean": 22.072916666666668,
+          "validation": [],
+          "commitId": "7427b822b98263cb9b7ab14e91cb98c5140f22095103df193c7c46f2cfc7253d"
+        },
+        {
+          "generation": 45,
+          "trainBest": 32.333333333333336,
+          "trainMean": 25.106770833333332,
+          "validation": [],
+          "commitId": "e0a010abe52f4c1d7ebb1474707294f198e07957189f66d07d5c4548802d78c8"
+        },
+        {
+          "generation": 46,
+          "trainBest": 30,
+          "trainMean": 23.395833333333332,
+          "validation": [],
+          "commitId": "ee9090fdbd774d8d10826c59a20621675b6cd048e61768d5bdbcc3099c2c142c"
+        },
+        {
+          "generation": 47,
+          "trainBest": 29.333333333333332,
+          "trainMean": 22.145833333333332,
+          "validation": [],
+          "commitId": "531205d03a4dc22223dd0ab5cc706dd3f70cee0b7321526c47914089e739c67f"
+        },
+        {
+          "generation": 48,
+          "trainBest": 30.333333333333332,
+          "trainMean": 23.453125,
+          "validation": [],
+          "commitId": "31a9eef403cd717ff37fb1af5759b3e4ea08b7bff8f1c9ad4cca89624e1c5043"
+        },
+        {
+          "generation": 49,
+          "trainBest": 28,
+          "trainMean": 22.0703125,
+          "validation": [
+            25,
+            25,
+            20,
+            24,
+            28,
+            18,
+            29,
+            30,
+            26,
+            32,
+            31,
+            25,
+            28,
+            24,
+            21,
+            27
+          ],
+          "commitId": "a2d4e32d36dd8e0a46531e4e68d12f1b8240214491241f2cb340182c9d62e46b"
+        }
+      ]
+    },
+    {
+      "run": 4,
+      "definition": {
+        "id": "experiment-pilot-v1-4",
+        "world": {
+          "width": 800,
+          "height": 600,
+          "foodCount": 48,
+          "obstacleCount": 0,
+          "bodyRadius": 8,
+          "foodRadius": 4,
+          "sensorRange": 140,
+          "vMax": 90,
+          "omegaMax": 3.141592653589793,
+          "maxTicks": 1800,
+          "maxEnergy": 100,
+          "foodEnergy": 20
+        },
+        "evolution": {
+          "population": 128,
+          "elites": 4,
+          "immigrants": 8,
+          "trials": 3,
+          "tournamentSize": 4,
+          "mutationProbability": 0.1,
+          "mutationSigma": 0.05,
+          "validationInterval": 10,
+          "validationTrials": 16
+        },
+        "roots": {
+          "initialization": "pilot-v1-4:initialization",
+          "training": "pilot-v1-4:training",
+          "evolution": "pilot-v1-4:evolution",
+          "validation": "pilot-v1-4:validation"
+        }
+      },
+      "initialValidation": 7.625,
+      "finalValidation": 21.75,
+      "initialNonzeroFraction": 0.7421875,
+      "baselines": {
+        "frozenRandom": 0.4375,
+        "randomActions": 0.625,
+        "scripted": 22.375
+      },
+      "generationSeconds": {
+        "median": 1.9311814160000067,
+        "p95": 2.102536542000016
+      },
+      "summaries": [
+        {
+          "generation": 0,
+          "trainBest": 8.666666666666666,
+          "trainMean": 1.0625,
+          "validation": [],
+          "commitId": "b4256b6560add1f9ea5720ce0b2cbfafc427dab9af83108b99b4bc9c1131c267"
+        },
+        {
+          "generation": 1,
+          "trainBest": 6.333333333333333,
+          "trainMean": 1.8723958333333333,
+          "validation": [],
+          "commitId": "0da7e4c08a54c5ca9f56334b2582cae6e95ca3646560331550159aab94091565"
+        },
+        {
+          "generation": 2,
+          "trainBest": 9.333333333333334,
+          "trainMean": 3.078125,
+          "validation": [],
+          "commitId": "add19bc5008d005f113d5dcf7bb7d3cf27859ef8f876fa967e11ad53de71ed2e"
+        },
+        {
+          "generation": 3,
+          "trainBest": 12,
+          "trainMean": 4.979166666666667,
+          "validation": [],
+          "commitId": "e7757b54f3e8605071a26898a6e318a59b18ee7bcd6f38ca52062b89db3ba6cb"
+        },
+        {
+          "generation": 4,
+          "trainBest": 11.333333333333334,
+          "trainMean": 5.330729166666667,
+          "validation": [],
+          "commitId": "929993fd233e2c8ebeae51e740a4f4a421f8594dce5edb7df7bdbc4f2986191c"
+        },
+        {
+          "generation": 5,
+          "trainBest": 13,
+          "trainMean": 5.8984375,
+          "validation": [],
+          "commitId": "767bc3f9fe4ae5b58ce39e8410bf635b14fc4b00be44fa20b4cb32a67e3d129c"
+        },
+        {
+          "generation": 6,
+          "trainBest": 16.333333333333332,
+          "trainMean": 8.140625,
+          "validation": [],
+          "commitId": "8c9f80be51d6e59f835f31d6f823ed6bce930795b3fdb568442891b57e2aaed0"
+        },
+        {
+          "generation": 7,
+          "trainBest": 12.333333333333334,
+          "trainMean": 6.544270833333333,
+          "validation": [],
+          "commitId": "5d0cf16b59025733c7c092e17ef725e4c5d63ba874ccfdcfb5633233c762a059"
+        },
+        {
+          "generation": 8,
+          "trainBest": 13.666666666666666,
+          "trainMean": 7.2109375,
+          "validation": [],
+          "commitId": "358f50c3c8be5697750b3411178c131e006a87bbb3be582f791693563f493c75"
+        },
+        {
+          "generation": 9,
+          "trainBest": 14,
+          "trainMean": 8.2421875,
+          "validation": [
+            8,
+            7,
+            9,
+            7,
+            8,
+            8,
+            7,
+            9,
+            6,
+            7,
+            11,
+            10,
+            11,
+            12,
+            8,
+            8
+          ],
+          "commitId": "4b22ff619e55bfcf2a30b86a8e9d1086b50b58e8e279193c828a90a255fa6425"
+        },
+        {
+          "generation": 10,
+          "trainBest": 12,
+          "trainMean": 7.770833333333333,
+          "validation": [],
+          "commitId": "407c556d5803d803faaa2780ac38d172a17c4e1c3f004134e98a60d0611f3c54"
+        },
+        {
+          "generation": 11,
+          "trainBest": 13.333333333333334,
+          "trainMean": 7.182291666666667,
+          "validation": [],
+          "commitId": "97e1b296dd8556126d961ab7db86ef71e5800e131c1ba7fcb578165e4808f92e"
+        },
+        {
+          "generation": 12,
+          "trainBest": 13.666666666666666,
+          "trainMean": 8.231770833333334,
+          "validation": [],
+          "commitId": "43112cd10cba193666bc0ef8c13bcbcd96fbd17d4b52def7f29bc6e208149487"
+        },
+        {
+          "generation": 13,
+          "trainBest": 14.666666666666666,
+          "trainMean": 9.098958333333334,
+          "validation": [],
+          "commitId": "20ecbf8ac665c877dcc4b89431075f923669cd232cc85621d11db91513fa926f"
+        },
+        {
+          "generation": 14,
+          "trainBest": 17,
+          "trainMean": 8.966145833333334,
+          "validation": [],
+          "commitId": "9964441559e7b89c4cfd7106ef398fcc43d8cf797f17cdbb7fd48debda29a24b"
+        },
+        {
+          "generation": 15,
+          "trainBest": 15.666666666666666,
+          "trainMean": 9.1484375,
+          "validation": [],
+          "commitId": "304891ba6293bbb20821f53c1fc06386bc1e597aa4a033ae6f73b3feafdd139c"
+        },
+        {
+          "generation": 16,
+          "trainBest": 16,
+          "trainMean": 9.71875,
+          "validation": [],
+          "commitId": "267158d94812dad9c8cca05a0156d73fcc84e240a0fd8d292fc2ca2c1341afde"
+        },
+        {
+          "generation": 17,
+          "trainBest": 16.333333333333332,
+          "trainMean": 9.692708333333334,
+          "validation": [],
+          "commitId": "a640b6b8efb3a2d8f08265c58adf4c08c6677cca0d231375031d4c8cfce4eea5"
+        },
+        {
+          "generation": 18,
+          "trainBest": 15,
+          "trainMean": 9.424479166666666,
+          "validation": [],
+          "commitId": "187a4a9fb19fcf904d5bd439a5eca2fb8344d85e89c2096b68bd7ad339ab5f44"
+        },
+        {
+          "generation": 19,
+          "trainBest": 16,
+          "trainMean": 10.0234375,
+          "validation": [
+            17,
+            18,
+            17,
+            11,
+            13,
+            15,
+            12,
+            10,
+            13,
+            20,
+            11,
+            8,
+            20,
+            14,
+            13,
+            15
+          ],
+          "commitId": "959a8bda69bd94a44f8105f773d89daecf1ab131a507c48aa981130951de0980"
+        },
+        {
+          "generation": 20,
+          "trainBest": 16.333333333333332,
+          "trainMean": 10.653645833333334,
+          "validation": [],
+          "commitId": "2e97681f5e1f782dada7ef4a5996b73eda8350eaf846fcfde7684df33ee5810f"
+        },
+        {
+          "generation": 21,
+          "trainBest": 16.333333333333332,
+          "trainMean": 11.020833333333334,
+          "validation": [],
+          "commitId": "7b3eeed6e04b686ad39a2a5dc12f75ff91eec0f16c2300a4c2bb1f086a1134ea"
+        },
+        {
+          "generation": 22,
+          "trainBest": 19.666666666666668,
+          "trainMean": 12.2265625,
+          "validation": [],
+          "commitId": "17a40d83287cb431ad1029c5b144a99a991a512e93a33fb33f972da1e7917cf0"
+        },
+        {
+          "generation": 23,
+          "trainBest": 19,
+          "trainMean": 12.942708333333334,
+          "validation": [],
+          "commitId": "56e0924f9cf3c8ddb53ea9f8af65707a4ac67b71d431011bcca9fb37769f06f3"
+        },
+        {
+          "generation": 24,
+          "trainBest": 17,
+          "trainMean": 12.236979166666666,
+          "validation": [],
+          "commitId": "11b31013bbf3d2bc6628892ff211fcdad3bfa638d564ce76582481644eb0151f"
+        },
+        {
+          "generation": 25,
+          "trainBest": 18.666666666666668,
+          "trainMean": 12.927083333333334,
+          "validation": [],
+          "commitId": "60a378f2a04b67b9be968b3163cd26e987037c9b21c1fb930c5d5a6f30157a18"
+        },
+        {
+          "generation": 26,
+          "trainBest": 20.666666666666668,
+          "trainMean": 13.575520833333334,
+          "validation": [],
+          "commitId": "c8c11f6f22a564073416d16a1846feaab7558f2232c6240f8099a94222610952"
+        },
+        {
+          "generation": 27,
+          "trainBest": 20.333333333333332,
+          "trainMean": 13.880208333333334,
+          "validation": [],
+          "commitId": "a8955cc19b840e490aa5801c68655c41110a1df68b127cbdaacc1692735696db"
+        },
+        {
+          "generation": 28,
+          "trainBest": 17.333333333333332,
+          "trainMean": 13.40625,
+          "validation": [],
+          "commitId": "8567cf24c37b9469bec83ced102b6268b9b3924e7d5a601c8785e5681b618763"
+        },
+        {
+          "generation": 29,
+          "trainBest": 19.666666666666668,
+          "trainMean": 14.354166666666666,
+          "validation": [
+            16,
+            20,
+            17,
+            15,
+            16,
+            9,
+            17,
+            12,
+            18,
+            18,
+            15,
+            18,
+            24,
+            17,
+            10,
+            16
+          ],
+          "commitId": "0826b0970c7e139f8fc117ebe2c71eeea9cdd32e6d4e8fd84c5100d4f7c85dd5"
+        },
+        {
+          "generation": 30,
+          "trainBest": 19.666666666666668,
+          "trainMean": 14.674479166666666,
+          "validation": [],
+          "commitId": "513e365559a3c694b71f9824e28ced732ca419ec441687f74aafb2e761f45623"
+        },
+        {
+          "generation": 31,
+          "trainBest": 19.666666666666668,
+          "trainMean": 14.213541666666666,
+          "validation": [],
+          "commitId": "0979786c6e26c80043e757d7ca232e3b0f80742db20370c97a4f041aa1722ecf"
+        },
+        {
+          "generation": 32,
+          "trainBest": 21,
+          "trainMean": 14.869791666666666,
+          "validation": [],
+          "commitId": "497d43a6de873ffe7c9a80f67cd8605f62eaf68b4d8e43791bc83fc87deb0acc"
+        },
+        {
+          "generation": 33,
+          "trainBest": 24.666666666666668,
+          "trainMean": 16.736979166666668,
+          "validation": [],
+          "commitId": "831a3e0306b910c2499c7839f667b9ab478f2b9718d223f826c76dec08efca15"
+        },
+        {
+          "generation": 34,
+          "trainBest": 21,
+          "trainMean": 15.4453125,
+          "validation": [],
+          "commitId": "5bca27fd158902a71334cdf4e7db852228f7cb57584251eba5068dcc1a26f5a5"
+        },
+        {
+          "generation": 35,
+          "trainBest": 21.333333333333332,
+          "trainMean": 16.138020833333332,
+          "validation": [],
+          "commitId": "3351d8a54f2aa0a2adf872aaab8fb96ea7262be9274839334add0ccf38b0457c"
+        },
+        {
+          "generation": 36,
+          "trainBest": 22,
+          "trainMean": 15.0625,
+          "validation": [],
+          "commitId": "52ada2e921bc4304cf9895ec45087a47d3c450c67b53b4939cfd51185770661d"
+        },
+        {
+          "generation": 37,
+          "trainBest": 22,
+          "trainMean": 16.575520833333332,
+          "validation": [],
+          "commitId": "b741aac122524e9124728eafe3dfc197cb6f5f7f4337cc8e7c7061e861d30231"
+        },
+        {
+          "generation": 38,
+          "trainBest": 22.333333333333332,
+          "trainMean": 16.653645833333332,
+          "validation": [],
+          "commitId": "74488d9d9c395f7418ced593da74d64baf3421aee3cb0494edaf3310b1223307"
+        },
+        {
+          "generation": 39,
+          "trainBest": 21,
+          "trainMean": 15.4375,
+          "validation": [
+            17,
+            14,
+            14,
+            14,
+            16,
+            17,
+            20,
+            17,
+            19,
+            21,
+            19,
+            17,
+            21,
+            16,
+            15,
+            22
+          ],
+          "commitId": "d1e16775edc7dc53bc251d66995ec0a7d6baea48568aa8dd66f69f3899c2939e"
+        },
+        {
+          "generation": 40,
+          "trainBest": 24.666666666666668,
+          "trainMean": 17.2890625,
+          "validation": [],
+          "commitId": "6a970f09f114a7343b3da3919ca8dcc8796b8ed2b2e0bd21c08664dad94dc19b"
+        },
+        {
+          "generation": 41,
+          "trainBest": 22.333333333333332,
+          "trainMean": 16.111979166666668,
+          "validation": [],
+          "commitId": "6c1faacd48be7cae259753bb6410fe356fef16f8b0aa37cbdd8baba277a9e9dd"
+        },
+        {
+          "generation": 42,
+          "trainBest": 22,
+          "trainMean": 16.40625,
+          "validation": [],
+          "commitId": "9e22f915ece5ee39a67ea34f477a97b22877703d87ce83781c563a8de8738c16"
+        },
+        {
+          "generation": 43,
+          "trainBest": 23,
+          "trainMean": 16.5,
+          "validation": [],
+          "commitId": "4e397f2233866a22defbbe1e2940fd455740547f8d39cacea2fa97a2e8905479"
+        },
+        {
+          "generation": 44,
+          "trainBest": 24,
+          "trainMean": 17.53125,
+          "validation": [],
+          "commitId": "6b48068613fe72b03a37cf3da7c2a7f834a33ed515d9f7880b5f920d773834e9"
+        },
+        {
+          "generation": 45,
+          "trainBest": 23.333333333333332,
+          "trainMean": 17.390625,
+          "validation": [],
+          "commitId": "16370bc79c10d544b06a5550dcc57d4c78f2cf1ccfc8e5703a179892b1063ca5"
+        },
+        {
+          "generation": 46,
+          "trainBest": 22.333333333333332,
+          "trainMean": 17.7578125,
+          "validation": [],
+          "commitId": "776c8d2349c635b73b0f4d21e1c083df4d7844d8a14973f4f97c00cc90b80064"
+        },
+        {
+          "generation": 47,
+          "trainBest": 24,
+          "trainMean": 17.645833333333332,
+          "validation": [],
+          "commitId": "27a8087922a38f50153a837c3579b873f8b941aa7528e8bc5f66aad1e85fd6af"
+        },
+        {
+          "generation": 48,
+          "trainBest": 24,
+          "trainMean": 18.763020833333332,
+          "validation": [],
+          "commitId": "cd62a3fd47f6fec4bf10494eaf708732e60ad2050925090f79fcc80984a01ab2"
+        },
+        {
+          "generation": 49,
+          "trainBest": 22,
+          "trainMean": 17.1640625,
+          "validation": [
+            24,
+            24,
+            23,
+            21,
+            27,
+            19,
+            20,
+            17,
+            26,
+            24,
+            25,
+            21,
+            21,
+            17,
+            18,
+            21
+          ],
+          "commitId": "696ec4790690a803bc7e9429a2846fd35ceea2bb5aa6a1f5d6d23df864e7b710"
+        }
+      ]
+    }
+  ]
+}
