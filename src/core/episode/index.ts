@@ -1,5 +1,6 @@
+import { type RandomState } from "../random";
 import { ENGINE_VERSION, type Scenario, type TrialResult } from "../model";
-import { hash } from "../canonical";
+import { parameterHash, hash } from "../canonical";
 import { createController, type ControllerDefinition } from "../controller";
 import { validateScenario } from "../world/scenario";
 import { observe, wrap, type SenseState } from "../world/sensing";
@@ -18,7 +19,96 @@ export interface EpisodeState extends SenseState {
   right: number;
   terminal: TrialResult["terminalReason"] | null;
 }
+export interface DecisionTrace {
+  tick: number;
+  x: number;
+  y: number;
+  heading: number;
+  inputs: number[];
+  hidden: number[] | null;
+  outputs: number[];
+}
+export interface EpisodeCheckpoint {
+  formatVersion: 1;
+  engineVersion: string;
+  definition: EpisodeDefinition;
+  state: EpisodeState;
+  controllerState: RandomState | null;
+  lastDecision: DecisionTrace | null;
+}
 export class EpisodeRunner {
+  private lastDecision: DecisionTrace | null = null;
+  decisionTrace(): DecisionTrace | null {
+    return structuredClone(this.lastDecision);
+  }
+  checkpoint(): EpisodeCheckpoint {
+    return structuredClone({
+      formatVersion: 1,
+      engineVersion: ENGINE_VERSION,
+      definition: this.definition,
+      state: this.state,
+      controllerState: this.controller.state(),
+      lastDecision: this.lastDecision,
+    });
+  }
+  static restore(checkpoint: EpisodeCheckpoint): EpisodeRunner {
+    if (
+      checkpoint.formatVersion !== 1 ||
+      checkpoint.engineVersion !== ENGINE_VERSION
+    )
+      throw new Error("Unsupported episode checkpoint");
+    const c = structuredClone(checkpoint),
+      runner = new EpisodeRunner(c.definition),
+      s = c.state,
+      world = c.definition.scenario;
+    if (
+      ![
+        s.x,
+        s.y,
+        s.heading,
+        s.energy,
+        s.speed,
+        s.angularSpeed,
+        s.tick,
+        s.foodCollected,
+        s.distanceTravelled,
+        s.contactTicks,
+        s.left,
+        s.right,
+      ].every(Number.isFinite) ||
+      !Number.isInteger(s.tick) ||
+      s.tick < 0 ||
+      s.tick > world.config.maxTicks ||
+      !Array.isArray(s.remaining) ||
+      s.remaining.length !== world.food.length ||
+      s.remaining.some((x) => typeof x !== "boolean") ||
+      s.foodCollected !== s.remaining.filter((x) => !x).length ||
+      s.energy < 0 ||
+      s.energy > world.config.maxEnergy ||
+      Math.abs(s.left) > 1 ||
+      Math.abs(s.right) > 1 ||
+      typeof s.contact !== "boolean"
+    )
+      throw new Error("Invalid episode state");
+    const expected =
+      s.foodCollected === world.food.length
+        ? "allFoodCollected"
+        : s.energy <= 0
+          ? "energyExhausted"
+          : s.tick >= world.config.maxTicks
+            ? "timeLimit"
+            : null;
+    if (s.terminal !== expected) throw new Error("Invalid terminal state");
+    if (c.definition.controller.kind === "random" && !c.controllerState)
+      throw new Error("Missing random controller state");
+    runner.state = s;
+    runner.controller = createController(
+      c.definition.controller,
+      c.controllerState,
+    );
+    runner.lastDecision = c.lastDecision;
+    return runner;
+  }
   private definition: EpisodeDefinition;
   private state: EpisodeState;
   private controller;
@@ -66,6 +156,23 @@ export class EpisodeRunner {
     if (s.tick % 3 === 0) {
       observe(world, s, this.inputs);
       this.controller.act(this.inputs, this.outputs);
+      if (
+        !this.outputs.every(Number.isFinite) ||
+        this.outputs.some((x) => Math.abs(x) > 1)
+      )
+        throw new Error("Invalid controller output");
+      if (this.definition.trace)
+        this.lastDecision = {
+          tick: s.tick,
+          x: s.x,
+          y: s.y,
+          heading: s.heading,
+          inputs: Array.from(this.inputs),
+          hidden: this.controller.hidden()
+            ? Array.from(this.controller.hidden()!)
+            : null,
+          outputs: Array.from(this.outputs),
+        };
       s.left = this.outputs[0];
       s.right = this.outputs[1];
       s.contact = false;
@@ -127,7 +234,10 @@ export class EpisodeRunner {
       objectiveVersion: "food-v1" as const,
       scenarioHash: this.definition.scenario.hash,
       controllerId: this.definition.controller.id,
-      controllerVersion: hash(this.definition.controller),
+      controllerVersion:
+        this.definition.controller.kind === "neural"
+          ? parameterHash(this.definition.controller.parameters)
+          : hash(this.definition.controller),
     };
     return {
       spec: { ...body, hash: hash(body) },
@@ -142,3 +252,6 @@ export class EpisodeRunner {
   }
 }
 export const createEpisode = (def: EpisodeDefinition) => new EpisodeRunner(def);
+
+export const restoreEpisode = (checkpoint: EpisodeCheckpoint) =>
+  EpisodeRunner.restore(checkpoint);
