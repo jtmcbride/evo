@@ -14,7 +14,8 @@
     "lint": "eslint . && node --import tsx scripts/check-core.ts",
     "test:engine": "vitest run",
     "evaluate": "node --import tsx scripts/evaluate.ts",
-    "evolve": "node --import tsx scripts/evolve.ts"
+    "evolve": "node --import tsx scripts/evolve.ts",
+    "benchmark": "node --import tsx scripts/benchmark.ts"
   },
   "dependencies": {
     "@noble/hashes": "2.4.0",

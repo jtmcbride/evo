@@ -85,6 +85,14 @@ export class EpisodeRunner {
       s.foodCollected !== s.remaining.filter((x) => !x).length ||
       s.energy < 0 ||
       s.energy > world.config.maxEnergy ||
+      s.x < world.config.bodyRadius - 1e-5 ||
+      s.x > world.config.width - world.config.bodyRadius + 1e-5 ||
+      s.y < world.config.bodyRadius - 1e-5 ||
+      s.y > world.config.height - world.config.bodyRadius + 1e-5 ||
+      !Number.isInteger(s.contactTicks) ||
+      s.contactTicks < 0 ||
+      s.contactTicks > s.tick ||
+      s.distanceTravelled < 0 ||
       Math.abs(s.left) > 1 ||
       Math.abs(s.right) > 1 ||
       typeof s.contact !== "boolean"

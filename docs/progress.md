@@ -9,3 +9,9 @@ Implemented seeded open/obstacle scenarios, 20 local observations, exact rounded
 **M2 complete**
 
 Added Float32 20–12–2 neural parameters, reusable Float64 inference buffers, frozen-neural and seeded random-action baselines, exact decision traces, and portable episode checkpoints. The codec preserves parameter bytes and signed zero. Eleven tests pass, including independent neural reference calculations, trace equivalence, and random/neural restoration at tick 17 between decisions. Typecheck, lint, and production build pass.
+
+**M3 complete**
+
+Implemented common training trials, fixed validation trials, seeded tournaments, mutation with exact parameter patches, unchanged elite identity reuse, and a tick-budgeted experiment state machine with an acknowledgment barrier. Added an in-memory commit store, a guarded filesystem adapter, resumable evolution CLI, and exploratory pilot runner. Twenty-one tests pass, including shuffled evaluation order, generation restore, patch reconstruction, filesystem recovery/conflicts, and an actual CLI split run matching an uninterrupted run byte-for-byte. Typecheck, lint, and production build pass.
+
+The full default-size open-arena task pilot (five independent runs, fifty generations each) is running. Results will be recorded separately; successful correctness checks do not establish learning or generalization.

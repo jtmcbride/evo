@@ -130,3 +130,48 @@ test("food sensing skips occluded nearer food and respects local orientation", (
   expect(x[8]).toBeCloseTo(1 - 20 / 140);
   expect(observe(world, { ...state, heading: Math.PI })[4]).toBe(x[0]);
 });
+
+test("rounded corners allow paths outside the actual disk expansion", () => {
+  const r = { id: "corner", x: 200, y: 100, width: 50, height: 50 };
+  const result = move({ x: 180, y: 93 }, { x: 13, y: 0 }, DEFAULT_WORLD, [r]);
+  expect(result.contact).toBe(false);
+  expect(result.position).toEqual({ x: 193, y: 93 });
+});
+test("contact survives until the next controller decision and scenarios are copied", () => {
+  const scenario = fixture({
+    config: { ...DEFAULT_WORLD, foodCount: 1, obstacleCount: 1 },
+    start: { x: 190, y: 150, heading: 0 },
+    obstacles: [{ id: "wall", x: 200, y: 100, width: 10, height: 200 }],
+  });
+  const episode = createEpisode({
+    scenario,
+    controller: { kind: "constant", id: "push", left: 1, right: 1 },
+    trace: true,
+  });
+  scenario.start.x = 300;
+  episode.advance(4);
+  expect(episode.decisionTrace()?.inputs[19]).toBe(1);
+  expect(episode.inspect().x).toBeLessThan(193);
+});
+test("many swept movements remain outside rectangles and arena walls", () => {
+  const obstacles = [{ id: "r", x: 300, y: 200, width: 150, height: 120 }];
+  for (let i = 0; i < 100; i++) {
+    const angle = (i * Math.PI) / 50,
+      start = {
+        x: 375 + 200 * Math.cos(angle),
+        y: 260 + 180 * Math.sin(angle),
+      },
+      delta = { x: 400 * Math.cos(angle + 2), y: 400 * Math.sin(angle + 2) };
+    const result = move(start, delta, DEFAULT_WORLD, obstacles);
+    expect(rectDistance(result.position, obstacles[0])).toBeGreaterThanOrEqual(
+      8 - 1e-6,
+    );
+    expect(result.position.x).toBeGreaterThanOrEqual(8 - 1e-6);
+    expect(result.position.x).toBeLessThanOrEqual(792 + 1e-6);
+    expect(result.position.y).toBeGreaterThanOrEqual(8 - 1e-6);
+    expect(result.position.y).toBeLessThanOrEqual(592 + 1e-6);
+    expect(result.length).toBeLessThanOrEqual(
+      Math.hypot(delta.x, delta.y) + 1e-6,
+    );
+  }
+});
