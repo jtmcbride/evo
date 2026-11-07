@@ -9,6 +9,7 @@ import {
 import { ExperimentRunner } from "../../src/core/experiment";
 import { generateScenario } from "../../src/core/world/scenario";
 import { createEpisode } from "../../src/core/episode";
+import { branchSuites, validateMatrix } from "../../src/core/branch/matrix";
 function setup() {
   const d = defineExperiment("runtime");
   Object.assign(d.evolution, {
@@ -65,6 +66,78 @@ function setup() {
 function commits(events: RuntimeEvent[]) {
   return events.filter((e) => e.type === "generationCommit");
 }
+test("matrix and neural-intervention jobs preserve training, use decision boundaries and cancel cleanly", () => {
+  const h = setup(),
+    baseline = new ExperimentRunner(h.checkpoint);
+  while (baseline.phase !== "awaitingCommit") baseline.advance(10000);
+  const g = h.checkpoint.population[0];
+  h.send({
+    type: "openPlayback",
+    playbackId: "neural",
+    definition: {
+      scenario: h.playback.scenario,
+      controller: { kind: "neural", id: g.id, parameters: g.parameters },
+    },
+  });
+  h.send({ type: "stepPlayback", playbackId: "neural", mode: "tick" });
+  const world = h.checkpoint.definition.world,
+    input = {
+      controllers: [
+        { experimentId: "a", name: "A", generation: 0, genome: g },
+        {
+          experimentId: "b",
+          name: "B",
+          generation: 0,
+          genome: h.checkpoint.population[1],
+        },
+      ],
+      suites: branchSuites(
+        "worker-common",
+        world,
+        { ...world, sensorRange: 70 },
+        1,
+      ),
+    };
+  const matrix = h.send({ type: "compareBranchMatrix", ...h.scope, input });
+  h.send({ type: "startTraining", ...h.scope, generations: 1 });
+  h.until(
+    () =>
+      commits(h.events).length === 1 &&
+      h.events.some((e) => e.type === "reply" && e.requestId === matrix),
+  );
+  expect(commits(h.events)[0].commit).toEqual(baseline.pendingCommit());
+  const reply = h.events.find(
+    (e) => e.type === "reply" && e.requestId === matrix,
+  );
+  if (reply?.type !== "reply" || reply.data.type !== "branchMatrix")
+    throw new Error("Missing matrix");
+  validateMatrix(reply.data.matrix);
+  const clamp = h.send({
+    type: "compareIntervention",
+    ...h.scope,
+    playbackId: "neural",
+    choice: { kind: "hiddenClamp", neuron: 0, value: 0 },
+  });
+  h.until(() =>
+    h.events.some((e) => e.type === "reply" && e.requestId === clamp),
+  );
+  const result = h.events.find(
+    (e) => e.type === "reply" && e.requestId === clamp,
+  );
+  expect(
+    result?.type === "reply" &&
+      result.data.type === "comparison" &&
+      result.data.comparison.intervention.startTick,
+  ).toBe(3);
+  const old = h.send({ type: "compareBranchMatrix", ...h.scope, input });
+  h.send({ type: "initialize", checkpoint: h.checkpoint });
+  expect(
+    h.events.some(
+      (e) =>
+        e.type === "error" && e.requestId === old && e.code === "CANCELLED",
+    ),
+  ).toBe(true);
+});
 test("parent/child suites leave training identical and settle replacement and cancellation", () => {
   const h = setup(),
     baseline = new ExperimentRunner(h.checkpoint);

@@ -103,6 +103,7 @@ export function validateOrigins(
   let previous: BranchOrigin | undefined;
   for (const origin of origins) {
     const s = origin.source;
+    if (!previous) seen.add(s.definition.id);
     validateDefinition(s.definition);
     validateDefinition(origin.definition);
     if (

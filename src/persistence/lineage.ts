@@ -30,10 +30,20 @@ export interface LineageView {
   replay: Replay | null;
 }
 export function sessionGenomes(session: SavedSession) {
-  const map = new Map(session.checkpoint.population.map((g) => [g.id, g]));
-  for (const r of session.replays) map.set(r.genome.id, r.genome);
-  if (session.bookmark)
-    map.set(session.bookmark.genome.id, session.bookmark.genome);
+  const map = new Map<string, Genome>();
+  const add = (g: Genome) => {
+    const old = map.get(g.id);
+    if (old && contentHash(old) !== contentHash(g))
+      throw new Error("Conflicting retained genome identity");
+    map.set(g.id, g);
+  };
+  session.checkpoint.population.forEach(add);
+  for (const r of session.replays) add(r.genome);
+  if (session.bookmark) add(session.bookmark.genome);
+  for (const c of session.comparisons ?? [])
+    if (c.restoration)
+      for (const g of [c.restoration.parent, c.restoration.child])
+        if (g.birthGeneration <= session.checkpoint.generation) add(g);
   return [...map.values()].sort(
     (a, b) => a.birthGeneration - b.birthGeneration || a.id.localeCompare(b.id),
   );

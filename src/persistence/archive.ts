@@ -57,6 +57,10 @@ export function createArchive(value: SavedSession): Uint8Array {
   };
   const data = {
     ...session,
+    branchOrigins: session.branchOrigins?.length
+      ? session.branchOrigins
+      : undefined,
+    matrices: undefined,
     lineage: undefined,
     checkpoint: {
       ...session.checkpoint,
@@ -90,7 +94,7 @@ export function createArchive(value: SavedSession): Uint8Array {
         },
       };
     }),
-    ...(session.matrices
+    ...(session.matrices?.length
       ? {
           matrices: session.matrices.map((m) => ({
             ...m,
@@ -141,6 +145,7 @@ export function createArchive(value: SavedSession): Uint8Array {
   const manifest = {
     format: "evolution-lab",
     formatVersion:
+      session.settings.body ||
       session.branchOrigins?.length ||
       session.matrices?.length ||
       session.comparisons?.some((c) => c.intervention.kind !== "sensorMask") ||
@@ -381,7 +386,8 @@ export function readArchive(bytes: Uint8Array): SavedSession {
     throw new Error("Comparisons require archive version 2");
   if (
     manifest.formatVersion < 4 &&
-    (session.branchOrigins?.length ||
+    (session.settings.body ||
+      session.branchOrigins?.length ||
       session.matrices?.length ||
       session.comparisons?.some((c) => c.intervention.kind !== "sensorMask") ||
       session.lineage?.generations.some((r) => r.definition))

@@ -15,6 +15,13 @@ import { hash } from "../core/canonical";
 import { encode } from "../core/codec";
 import type { LineageQuery, LineageView } from "../persistence/lineage";
 import type { ControllerComparison } from "../core/comparison/controllers";
+import type { BranchOrigin } from "../core/branch";
+import {
+  branchSuites,
+  validateMatrix,
+  type BranchMatrix,
+  type MatrixInput,
+} from "../core/branch/matrix";
 import { generateScenario } from "../core/world/scenario";
 import type { Genome, Scenario, TrialResult } from "../core/model";
 import type { GenerationCommit } from "../core/experiment";
@@ -71,6 +78,7 @@ export function prepare(settings: Settings): ExperimentDefinition {
     obstacleCount: s.preset === "obstacles" ? s.obstacleCount : 0,
     maxTicks: s.seconds * 30,
   });
+  if (s.body) Object.assign(d.world, s.body);
   Object.assign(d.evolution, {
     population: s.population,
     trials: s.trials,
@@ -107,6 +115,12 @@ export interface StorageView {
   archiveBusy: boolean;
 }
 export interface ViewState {
+  branchOrigins: BranchOrigin[];
+  matrices: BranchMatrix[];
+  matrixId: string | null;
+  matrixComparing: boolean;
+  matrixNotice: string | null;
+  matrixUnsaved: boolean;
   lineage: LineageView | null;
   lineageLoading: boolean;
   lineageError: string | null;
@@ -161,6 +175,7 @@ export class WorkbenchStore {
   } | null = null;
   private saving = false;
   private unsavedComparisons = new Set<string>();
+  private unsavedMatrices = new Set<string>();
   private lineageSerial = 0;
   private lineageWanted: { genomeId: string; query: LineageQuery } | null =
     null;
@@ -187,6 +202,12 @@ export class WorkbenchStore {
     readonly repository: Repository = new MemoryRepository(),
   ) {
     this.view = {
+      branchOrigins: [],
+      matrices: [],
+      matrixId: null,
+      matrixComparing: false,
+      matrixNotice: null,
+      matrixUnsaved: false,
       lineage: null,
       lineageLoading: false,
       lineageError: null,
@@ -296,6 +317,12 @@ export class WorkbenchStore {
         : null,
       provenance: this.provenance,
       comparisons: includeComparisons ? this.view.comparisons : [],
+      ...(this.view.branchOrigins.length
+        ? { branchOrigins: this.view.branchOrigins }
+        : {}),
+      ...(includeComparisons && this.view.matrices.length
+        ? { matrices: this.view.matrices }
+        : {}),
     });
   }
   getExportSession(): SavedSession {
@@ -304,6 +331,9 @@ export class WorkbenchStore {
       ? structuredClone({
           ...this.pendingSave.session,
           comparisons: this.view.comparisons,
+          ...(this.view.matrices.length
+            ? { matrices: this.view.matrices }
+            : {}),
         })
       : this.makeSession();
   }
@@ -402,6 +432,7 @@ export class WorkbenchStore {
     this.ancestorReplay = null;
     this.lineageWanted = null;
     this.unsavedComparisons.clear();
+    this.unsavedMatrices.clear();
     this.replays = [...session.replays]
       .sort((a, b) => a.generation - b.generation)
       .slice(-50);
@@ -415,6 +446,12 @@ export class WorkbenchStore {
     this.inspectFrame(true);
     this.update({
       name: session.name,
+      branchOrigins: session.branchOrigins ?? [],
+      matrices: session.matrices ?? [],
+      matrixId: session.matrices?.at(-1)?.id ?? null,
+      matrixComparing: false,
+      matrixNotice: null,
+      matrixUnsaved: false,
       lineage: null,
       lineageLoading: false,
       lineageError: null,
@@ -752,11 +789,18 @@ export class WorkbenchStore {
       this.ancestorReplay = null;
       this.lineageWanted = null;
       this.unsavedComparisons.clear();
+      this.unsavedMatrices.clear();
       this.selectedReplay = null;
       this.frame = null;
       this.inspectFrame(true);
       this.update({
         name: this.activeSettings.name,
+        branchOrigins: [],
+        matrices: [],
+        matrixId: null,
+        matrixComparing: false,
+        matrixNotice: null,
+        matrixUnsaved: false,
         lineage: null,
         lineageLoading: false,
         lineageError: null,
@@ -912,6 +956,7 @@ export class WorkbenchStore {
     if (
       this.view.comparing ||
       this.view.lineageComparing ||
+      this.view.matrixComparing ||
       this.view.initializing
     )
       return;
@@ -1167,6 +1212,7 @@ export class WorkbenchStore {
       !view?.parent ||
       this.view.comparing ||
       this.view.lineageComparing ||
+      this.view.matrixComparing ||
       this.view.initializing
     )
       return;
@@ -1241,6 +1287,188 @@ export class WorkbenchStore {
         !String(error).includes("CANCELLED")
       )
         this.problem(error);
+    }
+  }
+  async fork(name: string, definition: ExperimentDefinition) {
+    if (
+      this.view.initializing ||
+      this.saving ||
+      this.pendingSave ||
+      this.view.storage.blocked ||
+      this.view.status?.training ||
+      this.view.status?.phase !== "readyToEvaluate" ||
+      this.view.comparing ||
+      this.view.lineageComparing ||
+      this.view.matrixComparing
+    )
+      return;
+    const id = this.view.storage.id;
+    if (!id) {
+      this.problem("Save this population before branching");
+      return;
+    }
+    if (this.view.comparisonUnsaved || this.view.matrixUnsaved) {
+      this.problem(
+        "Retry saving pending comparisons before branching; checkpoint export remains available.",
+      );
+      return;
+    }
+    this.update({ initializing: true, error: null });
+    try {
+      const handle = await this.repository.fork(
+        id,
+        this.view.storage.revision,
+        name,
+        definition,
+      );
+      await this.activateSaved(handle);
+      await this.refreshLibrary();
+    } catch (error) {
+      this.problem(error);
+    } finally {
+      this.update({ initializing: false });
+    }
+  }
+  selectMatrix(id: string) {
+    if (this.view.matrices.some((m) => m.id === id))
+      this.update({ matrixId: id });
+  }
+  async compareBranches(referenceId: string, count = 3, replay?: BranchMatrix) {
+    if (
+      this.view.matrixComparing ||
+      this.view.comparing ||
+      this.view.lineageComparing ||
+      this.view.initializing
+    )
+      return;
+    const scope = this.requiredScope(),
+      localId = this.view.storage.id,
+      origin = this.view.branchOrigins.at(-1);
+    this.update({
+      matrixComparing: true,
+      matrixNotice: "Evaluating the full controller × environment matrix…",
+    });
+    try {
+      let input: MatrixInput;
+      if (replay)
+        input = { controllers: replay.controllers, suites: replay.suites };
+      else {
+        if (!origin || !localId || !this.checkpoint)
+          throw new Error("Create or load a branch first");
+        const reference = await this.repository.load(referenceId),
+          referenceStart =
+            reference.session.branchOrigins?.at(-1)?.source.generation ?? 0;
+        const left = [...reference.session.replays]
+          .filter((r) => r.generation >= referenceStart)
+          .sort((a, b) => b.generation - a.generation)[0];
+        const right = [...this.replays]
+          .filter((r) => r.generation >= origin.source.generation)
+          .sort((a, b) => b.generation - a.generation)[0];
+        if (!left || !right)
+          throw new Error(
+            "Train at least one generation in each experiment before comparing their training-selected champions",
+          );
+        input = {
+          controllers: [
+            {
+              experimentId: reference.entry.id,
+              name: reference.session.name,
+              generation: left.generation,
+              genome: left.genome,
+            },
+            {
+              experimentId: localId,
+              name: this.view.name!,
+              generation: right.generation,
+              genome: right.genome,
+            },
+          ],
+          suites: branchSuites(
+            origin.source.checkpointHash,
+            origin.source.definition.world,
+            this.checkpoint.definition.world,
+            count,
+          ),
+        };
+      }
+      const reply = await this.client.request({
+        type: "compareBranchMatrix",
+        ...scope,
+        input,
+      });
+      if (this.scope !== scope || this.disposed) return;
+      if (reply.type !== "branchMatrix")
+        throw new Error("Unexpected matrix reply");
+      const matrix = reply.matrix;
+      validateMatrix(matrix);
+      const old = this.view.matrices.find((m) => m.id === matrix.id);
+      if (
+        (replay &&
+          hash(JSON.parse(encode(replay))) !==
+            hash(JSON.parse(encode(matrix)))) ||
+        (old &&
+          hash(JSON.parse(encode(old))) !== hash(JSON.parse(encode(matrix))))
+      )
+        throw new Error(
+          "Matrix replay differs in this runtime. The original record is preserved.",
+        );
+      if (!old && this.view.matrices.length >= 8)
+        throw new Error("This experiment already retains eight matrices");
+      this.unsavedMatrices.add(matrix.id);
+      this.update({
+        matrices: old ? this.view.matrices : [...this.view.matrices, matrix],
+        matrixId: matrix.id,
+        matrixUnsaved: true,
+        matrixNotice: replay
+          ? "Matrix replay matches every saved cell exactly. Saving…"
+          : "Matrix complete. Saving…",
+      });
+      await this.persistMatrices(scope, localId, !!replay);
+    } catch (error) {
+      if (this.scope === scope && !this.disposed)
+        this.update({ matrixNotice: `Matrix failed: ${String(error)}` });
+    } finally {
+      if (this.scope === scope && !this.disposed)
+        this.update({ matrixComparing: false });
+    }
+  }
+  private async persistMatrices(
+    scope: NonNullable<WorkbenchStore["scope"]>,
+    id: string | null,
+    replay = false,
+  ) {
+    try {
+      if (!id) throw new Error("Local storage is unavailable");
+      for (const matrix of this.view.matrices)
+        if (this.unsavedMatrices.has(matrix.id)) {
+          await this.repository.saveMatrix(id, matrix);
+          if (this.scope !== scope || this.disposed) return;
+          this.unsavedMatrices.delete(matrix.id);
+        }
+      if (this.scope === scope && !this.disposed)
+        this.update({
+          matrixUnsaved: false,
+          matrixNotice: replay
+            ? "Matrix replay matches every saved cell exactly. Saved locally."
+            : "Matrix saved locally.",
+        });
+    } catch (error) {
+      if (this.scope === scope && !this.disposed)
+        this.update({
+          matrixUnsaved: true,
+          matrixNotice: `Matrix is in memory; saving failed: ${String(error)} Retry saving or export a checkpoint.`,
+        });
+    }
+  }
+  async retryMatrices() {
+    if (this.view.matrixComparing) return;
+    const scope = this.requiredScope();
+    this.update({ matrixComparing: true });
+    try {
+      await this.persistMatrices(scope, this.view.storage.id);
+    } finally {
+      if (this.scope === scope && !this.disposed)
+        this.update({ matrixComparing: false });
     }
   }
   async setSpeed(speed: number) {

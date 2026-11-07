@@ -5,7 +5,9 @@ import {
   type TrialResult,
   type SensorMask,
   type Intervention,
+  type EvaluationSpec,
 } from "../model";
+import { encode } from "../codec";
 import { parameterHash, hash } from "../canonical";
 import { createController, type ControllerDefinition } from "../controller";
 import { validateScenario } from "../world/scenario";
@@ -283,7 +285,7 @@ export class EpisodeRunner {
         : {}),
     };
     return {
-      spec: { ...body, hash: hash(body) },
+      spec: { ...body, hash: evaluationHash(body) },
       foodCollected: s.foodCollected,
       distanceTravelled: s.distanceTravelled,
       contactTicks: s.contactTicks,
@@ -298,6 +300,13 @@ export const createEpisode = (def: EpisodeDefinition) => new EpisodeRunner(def);
 
 export const restoreEpisode = (checkpoint: EpisodeCheckpoint) =>
   EpisodeRunner.restore(checkpoint);
+export function evaluationHash(spec: Omit<EvaluationSpec, "hash">) {
+  return hash(
+    spec.intervention && spec.intervention.kind !== "sensorMask"
+      ? JSON.parse(encode(spec))
+      : spec,
+  );
+}
 
 export function validateSensorMask(mask: SensorMask, maxTicks: number) {
   if (

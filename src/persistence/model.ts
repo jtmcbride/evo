@@ -24,7 +24,11 @@ import {
   ComparisonRunner,
   type SensorComparison,
 } from "../core/comparison";
-import { restoreEpisode, validateIntervention } from "../core/episode";
+import {
+  restoreEpisode,
+  validateIntervention,
+  evaluationHash,
+} from "../core/episode";
 import {
   validateLineage,
   reconstructGenome,
@@ -554,7 +558,7 @@ export function parseComparison(value: unknown): SensorComparison {
     const { hash: checksum, ...spec } = a.result.spec;
     const expectedMask = index === 1 ? c.intervention : undefined;
     if (
-      hash(spec) !== checksum ||
+      evaluationHash(spec) !== checksum ||
       hash(spec.intervention ?? null) !== hash(expectedMask ?? null) ||
       spec.scenarioHash !== scenario.hash ||
       spec.controllerId !== controller.id ||

@@ -52,7 +52,10 @@ export function comparisonId(
   return hash({
     version: 1,
     source: JSON.parse(encode(source)),
-    intervention,
+    intervention:
+      intervention.kind === "sensorMask"
+        ? intervention
+        : JSON.parse(encode(intervention)),
     ...(restoration ? { restoration: JSON.parse(encode(restoration)) } : {}),
   });
 }

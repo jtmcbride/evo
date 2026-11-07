@@ -50,6 +50,88 @@ test("draft validation and preview use actual first-training conditions", () => 
     prepare({ ...settings, elites: 100, immigrants: 100 }),
   ).toThrow();
 });
+test("branch controls preserve their source and retain failed matrix saves for export and exact replay", async () => {
+  const { MemoryRepository } = await import("../../src/persistence/repository");
+  class Faulty extends MemoryRepository {
+    failMatrix = true;
+    override async saveMatrix(
+      ...args: Parameters<InstanceType<typeof MemoryRepository>["saveMatrix"]>
+    ) {
+      if (this.failMatrix)
+        throw new DOMException("Matrix quota", "QuotaExceededError");
+      return super.saveMatrix(...args);
+    }
+  }
+  const repo = new Faulty(),
+    transport = new Transport(),
+    store = new WorkbenchStore(
+      new SimulationClient(transport as unknown as Worker),
+      repo,
+    );
+  const pump = async (check: () => boolean) => {
+    for (let i = 0; i < 500 && !check(); i++) {
+      transport.runtime.pump();
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    expect(check()).toBe(true);
+  };
+  const run = async (work: Promise<void>) => {
+    let done = false;
+    const complete = work.finally(() => {
+      done = true;
+    });
+    await pump(() => done);
+    await complete;
+  };
+  try {
+    await store.ready;
+    store.updateDraft({ population: 16, seconds: 5, name: "Source" });
+    await store.create();
+    await store.train(1);
+    await pump(
+      () =>
+        store.getView().history.length === 1 &&
+        store.getView().storage.state === "saved",
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    const sourceId = store.getView().storage.id!,
+      source = await repo.load(sourceId),
+      definition = structuredClone(source.session.checkpoint.definition);
+    definition.id = "branch-store";
+    definition.world.sensorRange = 70;
+    await store.fork("Range branch", definition);
+    const branchId = store.getView().storage.id!;
+    expect(branchId).not.toBe(sourceId);
+    expect(store.getView().branchOrigins).toHaveLength(1);
+    expect(await repo.load(sourceId)).toEqual(source);
+    await store.compareBranches(sourceId, 1);
+    expect(store.getView().matrixNotice).toMatch(/Train at least one/);
+    await store.train(1);
+    await pump(
+      () =>
+        store.getView().history.length === 2 &&
+        store.getView().storage.state === "saved",
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    await run(store.compareBranches(sourceId, 1));
+    expect(store.getView().matrixUnsaved).toBe(true);
+    expect(store.getView().storage.blocked).toBe(false);
+    expect(store.getExportSession().matrices).toHaveLength(1);
+    expect(await repo.load(sourceId)).toEqual(source);
+    repo.failMatrix = false;
+    await store.retryMatrices();
+    expect(store.getView().matrixUnsaved).toBe(false);
+    await store.loadSaved(branchId);
+    const record = store.getView().matrices[0];
+    expect(record.cells).toHaveLength(4);
+    await run(store.compareBranches("", 1, record));
+    expect(store.getView().matrixNotice).toMatch(
+      /matches every saved cell exactly/,
+    );
+  } finally {
+    store.dispose();
+  }
+});
 test("retired ancestors replay original trials and matched parent suites after saved bookmark recovery", async () => {
   const transport = new Transport(),
     store = new WorkbenchStore(
