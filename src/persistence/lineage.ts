@@ -94,7 +94,11 @@ export function appendLineage(
     nodes: [...nodes.values()],
     generations: [
       ...bundle.generations,
-      { ...structuredClone(commit.record), commitId: commit.id },
+      {
+        ...structuredClone(commit.record),
+        commitId: commit.id,
+        definition: structuredClone(previous.definition),
+      },
     ],
   };
 }

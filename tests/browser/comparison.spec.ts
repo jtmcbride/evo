@@ -89,7 +89,9 @@ test("portable comparison archives replay in a fresh browser and survive further
   const session = readArchive(new Uint8Array(await readFile(file))),
     record = session.comparisons![0];
   expect(record.id).toBe(before.id);
-  expect(record.intervention.channel).toBe(16);
+  expect(
+    record.intervention.kind === "sensorMask" && record.intervention.channel,
+  ).toBe(16);
   // Numerical replay belongs to the same browser runtime, not the Node test host.
   const context = await browser.newContext(),
     imported = await context.newPage();

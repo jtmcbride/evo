@@ -18,7 +18,11 @@ import type { ControllerComparison } from "../core/comparison/controllers";
 import { generateScenario } from "../core/world/scenario";
 import type { Genome, Scenario, TrialResult } from "../core/model";
 import type { GenerationCommit } from "../core/experiment";
-import type { SensorComparison } from "../core/comparison";
+import {
+  comparisonChoice,
+  type SensorComparison,
+  type InterventionChoice,
+} from "../core/comparison";
 import { parseComparison } from "../persistence/model";
 import {
   DEFAULT_SETTINGS,
@@ -898,7 +902,13 @@ export class WorkbenchStore {
     if (this.view.comparisons.some((c) => c.id === id))
       this.update({ comparisonId: id });
   }
-  async compareSensor(channel: number, replay?: SensorComparison) {
+  async compareSensor(
+    channel: number,
+    replay?: SensorComparison,
+    operation?:
+      | { kind: "hiddenClamp"; neuron: number; value: number }
+      | { kind: "parentWeight"; parameter: number },
+  ) {
     if (
       this.view.comparing ||
       this.view.lineageComparing ||
@@ -914,19 +924,42 @@ export class WorkbenchStore {
       comparisonNotice: "Running two matched episodes…",
     });
     try {
+      let choice: InterventionChoice = replay
+        ? comparisonChoice(replay)
+        : { kind: "sensorMask", channel };
+      if (operation?.kind === "hiddenClamp") choice = operation;
+      if (operation?.kind === "parentWeight") {
+        if (!localId || !selection)
+          throw new Error(
+            "Save and select a controller with retained ancestry first",
+          );
+        const family = await this.repository.lineage(
+          localId,
+          selection.genome.id,
+        );
+        if (!family.parent)
+          throw new Error(
+            "The selected controller's actual parent is unavailable",
+          );
+        choice = {
+          kind: "parentWeight",
+          parameter: operation.parameter,
+          restoration: { parent: family.parent, child: family.genome },
+        };
+      }
       const reply = await this.client.request(
         replay
           ? {
-              type: "replayComparison",
+              type: "replayIntervention",
               ...scope,
               source: replay.source,
-              channel: replay.intervention.channel,
+              choice,
             }
           : {
-              type: "comparePlayback",
+              type: "compareIntervention",
               ...scope,
               playbackId: selection!.playbackId,
-              channel,
+              choice,
             },
       );
       if (this.scope !== scope || this.disposed) return;

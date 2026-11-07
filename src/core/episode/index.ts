@@ -4,6 +4,7 @@ import {
   type Scenario,
   type TrialResult,
   type SensorMask,
+  type Intervention,
 } from "../model";
 import { parameterHash, hash } from "../canonical";
 import { createController, type ControllerDefinition } from "../controller";
@@ -14,7 +15,7 @@ export interface EpisodeDefinition {
   scenario: Scenario;
   controller: ControllerDefinition;
   trace?: boolean;
-  intervention?: SensorMask;
+  intervention?: Intervention;
 }
 export interface EpisodeState extends SenseState {
   tick: number;
@@ -32,6 +33,7 @@ export interface DecisionTrace {
   heading: number;
   inputs: number[];
   rawInputs?: number[];
+  rawHidden?: number[];
   hidden: number[] | null;
   outputs: number[];
 }
@@ -132,7 +134,13 @@ export class EpisodeRunner {
   constructor(def: EpisodeDefinition) {
     validateScenario(def.scenario);
     if (def.intervention)
-      validateSensorMask(def.intervention, def.scenario.config.maxTicks);
+      validateIntervention(def.intervention, def.scenario.config.maxTicks);
+    if (
+      def.intervention &&
+      def.intervention.kind !== "sensorMask" &&
+      def.controller.kind !== "neural"
+    )
+      throw new Error("Neural intervention requires a neural controller");
     this.definition = structuredClone(def);
     this.controller = createController(this.definition.controller);
     const s = def.scenario;
@@ -172,11 +180,18 @@ export class EpisodeRunner {
       dt = 1 / 30;
     if (s.tick % 3 === 0) {
       observe(world, s, this.inputs);
-      const mask = this.definition.intervention;
+      const variant = this.definition.intervention;
+      const active =
+        variant && s.tick >= variant.startTick ? variant : undefined;
+      const mask = active?.kind === "sensorMask" ? active : undefined;
       const rawInputs =
         mask && s.tick >= mask.startTick ? Array.from(this.inputs) : undefined;
       if (rawInputs) this.inputs[mask!.channel] = 0;
-      this.controller.act(this.inputs, this.outputs);
+      this.controller.act(
+        this.inputs,
+        this.outputs,
+        active?.kind !== "sensorMask" ? active : undefined,
+      );
       if (
         !this.outputs.every(Number.isFinite) ||
         this.outputs.some((x) => Math.abs(x) > 1)
@@ -190,6 +205,9 @@ export class EpisodeRunner {
           heading: s.heading,
           inputs: Array.from(this.inputs),
           ...(rawInputs ? { rawInputs } : {}),
+          ...(this.controller.rawHidden()
+            ? { rawHidden: Array.from(this.controller.rawHidden()!) }
+            : {}),
           hidden: this.controller.hidden()
             ? Array.from(this.controller.hidden()!)
             : null,
@@ -294,4 +312,37 @@ export function validateSensorMask(mask: SensorMask, maxTicks: number) {
     mask.startTick % 3 !== 0
   )
     throw new Error("Invalid sensor mask");
+}
+export function validateIntervention(value: Intervention, maxTicks: number) {
+  if (value.kind === "sensorMask") return validateSensorMask(value, maxTicks);
+  if (
+    value.version !== 1 ||
+    !Number.isInteger(value.startTick) ||
+    value.startTick < 0 ||
+    value.startTick >= maxTicks ||
+    value.startTick % 3 !== 0 ||
+    !Number.isFinite(value.value)
+  )
+    throw new Error("Invalid intervention timing or value");
+  if (value.kind === "hiddenClamp") {
+    if (
+      !Number.isInteger(value.neuron) ||
+      value.neuron < 0 ||
+      value.neuron >= 12 ||
+      Math.abs(value.value) > 1
+    )
+      throw new Error("Invalid hidden neuron clamp");
+  } else if (value.kind === "parentWeight") {
+    if (
+      !Number.isInteger(value.parameter) ||
+      value.parameter < 0 ||
+      value.parameter >= 278 ||
+      !Object.is(Math.fround(value.value), value.value) ||
+      typeof value.parentId !== "string" ||
+      !value.parentId ||
+      value.parentId.length > 256 ||
+      !/^[a-f0-9]{64}$/.test(value.parentParameterHash)
+    )
+      throw new Error("Invalid parent weight restoration");
+  } else throw new Error("Unknown intervention");
 }

@@ -16,6 +16,45 @@ import type { SensorComparison } from "../core/comparison";
 import type { ControllerComparison } from "../core/comparison/controllers";
 import { retainGenome } from "../core/lineage";
 import type { Genome } from "../core/model";
+import {
+  validateMatrixInput,
+  type MatrixInput,
+  type BranchMatrix,
+} from "../core/branch/matrix";
+const genomeValue = z.custom<Genome>((v) => {
+  try {
+    retainGenome(v as Genome);
+    return true;
+  } catch {
+    return false;
+  }
+});
+const choice = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("sensorMask"),
+    channel: z.number().int().min(0).max(19),
+  }),
+  z.object({
+    kind: z.literal("hiddenClamp"),
+    neuron: z.number().int().min(0).max(11),
+    value: z.number().finite().min(-1).max(1),
+  }),
+  z.object({
+    kind: z.literal("parentWeight"),
+    parameter: z.number().int().min(0).max(277),
+    restoration: z.object({ parent: genomeValue, child: genomeValue }),
+  }),
+]);
+const episodeCheckpoint = z.custom<EpisodeCheckpoint>((v) => {
+  try {
+    const cp = v as EpisodeCheckpoint;
+    if (cp.definition.scenario.config.maxTicks > 5400) return false;
+    restoreEpisode(cp);
+    return true;
+  } catch {
+    return false;
+  }
+});
 
 export const PROTOCOL_VERSION = 1;
 const id = z.string().min(1).max(256);
@@ -60,6 +99,30 @@ const episode = z.object({
   trace: z.boolean().optional(),
 });
 const commands = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("compareIntervention"),
+    ...scope,
+    playbackId: id,
+    choice,
+  }),
+  z.object({
+    type: z.literal("replayIntervention"),
+    ...scope,
+    source: episodeCheckpoint,
+    choice,
+  }),
+  z.object({
+    type: z.literal("compareBranchMatrix"),
+    ...scope,
+    input: z.custom<MatrixInput>((v) => {
+      try {
+        validateMatrixInput(v as MatrixInput);
+        return true;
+      } catch {
+        return false;
+      }
+    }),
+  }),
   z.object({
     type: z.literal("compareControllers"),
     ...scope,
@@ -185,6 +248,7 @@ export type ReplyData =
   | { type: "playback"; snapshot: PlaybackSnapshot }
   | { type: "comparison"; comparison: SensorComparison }
   | { type: "controllerComparison"; comparison: ControllerComparison }
+  | { type: "branchMatrix"; matrix: BranchMatrix }
   | { type: "disposed" };
 interface EventBase {
   protocolVersion: 1;

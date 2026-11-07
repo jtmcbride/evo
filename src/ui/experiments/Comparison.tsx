@@ -4,12 +4,32 @@ import type { WorkbenchStore } from "../store";
 import { useView, useInspection } from "../hooks";
 import { INPUT_LABELS } from "../inspector/network";
 import { Trajectory } from "../arena/Trajectory";
+import type { Intervention } from "../../core/model";
+const label = (v: Intervention) =>
+  v.kind === "sensorMask"
+    ? INPUT_LABELS[v.channel]
+    : v.kind === "hiddenClamp"
+      ? `H${v.neuron} clamped to ${v.value}`
+      : `Parameter ${v.parameter} restored from parent`;
 
 const number = (v: number) => v.toFixed(4);
 function Outcomes({ record }: { record: SensorComparison }) {
   const a = record.control,
     b = record.masked,
-    channel = record.intervention.channel;
+    variant = record.intervention,
+    channel = variant.kind === "sensorMask" ? variant.channel : -1;
+  const raw =
+    variant.kind === "sensorMask"
+      ? b.firstDecision.rawInputs![channel]
+      : variant.kind === "hiddenClamp"
+        ? b.firstDecision.rawHidden![variant.neuron]
+        : record.restoration!.child.parameters[variant.parameter];
+  const effective =
+    variant.kind === "sensorMask"
+      ? b.firstDecision.inputs[channel]
+      : variant.kind === "hiddenClamp"
+        ? b.firstDecision.hidden![variant.neuron]
+        : variant.value;
   const metrics: [string, number, number][] = [
     ["Food collected", a.result.foodCollected, b.result.foodCollected],
     ["Distance", a.result.distanceTravelled, b.result.distanceTravelled],
@@ -30,8 +50,8 @@ function Outcomes({ record }: { record: SensorComparison }) {
           {record.source.definition.scenario.hash.slice(0, 12)}
         </code>
         <br />
-        Requested at tick <strong>{record.source.state.tick}</strong>; mask
-        begins at decision{" "}
+        Requested at tick <strong>{record.source.state.tick}</strong>;
+        intervention begins at decision{" "}
         <strong data-testid="comparison-start-tick">
           {record.intervention.startTick}
         </strong>{" "}
@@ -48,7 +68,7 @@ function Outcomes({ record }: { record: SensorComparison }) {
           scenario={record.source.definition.scenario}
           remaining={record.source.state.remaining}
           arm={b}
-          label={`Masked · ${INPUT_LABELS[channel]}`}
+          label={`Modified · ${label(variant)}`}
         />
       </div>
       <p className="comparison-legend">
@@ -62,7 +82,7 @@ function Outcomes({ record }: { record: SensorComparison }) {
               <tr>
                 <th scope="col">Measure</th>
                 <th scope="col">Control</th>
-                <th scope="col">Masked</th>
+                <th scope="col">Modified</th>
                 <th scope="col">Change</th>
               </tr>
             </thead>
@@ -92,7 +112,7 @@ function Outcomes({ record }: { record: SensorComparison }) {
               <tr>
                 <th scope="col">Motor</th>
                 <th scope="col">Control</th>
-                <th scope="col">Masked</th>
+                <th scope="col">Modified</th>
               </tr>
             </thead>
             <tbody>
@@ -108,15 +128,9 @@ function Outcomes({ record }: { record: SensorComparison }) {
         </div>
       </div>
       <p className="comparison-mask-value">
-        {INPUT_LABELS[channel]} at decision {record.intervention.startTick}: raw{" "}
-        <strong data-testid="comparison-raw">
-          {number(b.firstDecision.rawInputs![channel])}
-        </strong>{" "}
-        → effective{" "}
-        <strong data-testid="comparison-effective">
-          {number(b.firstDecision.inputs[channel])}
-        </strong>
-        .
+        {label(variant)} at decision {record.intervention.startTick}: raw{" "}
+        <strong data-testid="comparison-raw">{number(raw)}</strong> → effective{" "}
+        <strong data-testid="comparison-effective">{number(effective)}</strong>.
       </p>
       <details>
         <summary>All observations at the first affected decision</summary>
@@ -140,7 +154,11 @@ function Outcomes({ record }: { record: SensorComparison }) {
                     {i} · {label}
                   </th>
                   <td>{number(a.firstDecision.inputs[i])}</td>
-                  <td>{number(b.firstDecision.rawInputs![i])}</td>
+                  <td>
+                    {number(
+                      (b.firstDecision.rawInputs ?? b.firstDecision.inputs)[i],
+                    )}
+                  </td>
                   <td>{number(b.firstDecision.inputs[i])}</td>
                 </tr>
               ))}
@@ -148,11 +166,44 @@ function Outcomes({ record }: { record: SensorComparison }) {
           </table>
         </div>
       </details>
+      {variant.kind === "hiddenClamp" && (
+        <details>
+          <summary>Raw and effective hidden activations</summary>
+          <div className="comparison-table-scroll" tabIndex={0}>
+            <table aria-label="Clamped hidden activations">
+              <thead>
+                <tr>
+                  <th scope="col">Neuron</th>
+                  <th scope="col">Raw post-tanh</th>
+                  <th scope="col">Effective</th>
+                </tr>
+              </thead>
+              <tbody>
+                {b.firstDecision.hidden!.map((v, i) => (
+                  <tr key={i}>
+                    <th scope="row">H{i}</th>
+                    <td>{number(b.firstDecision.rawHidden![i])}</td>
+                    <td>{number(v)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
+      {variant.kind === "parentWeight" && (
+        <p className="comparison-context">
+          Parameter {variant.parameter}: child {String(raw)} → parent{" "}
+          {String(variant.value)}. Parent <code>{variant.parentId}</code> ·
+          weights <code>{variant.parentParameterHash}</code>. The saved child
+          genome is unchanged.
+        </p>
+      )}
       <p className="comparison-caveat">
-        This measures the effect of masking one input in this controller and
-        scenario. A zero value or unchanged outcome here does not establish a
-        sensor’s role in other episodes. Both arms include the same episode
-        prefix in their totals.
+        This measures one intervention in this controller and scenario. An
+        unchanged outcome here does not establish a sensor or neuron's role in
+        other episodes. Both arms include the same episode prefix in their
+        totals.
       </p>
     </div>
   );
@@ -162,6 +213,12 @@ export function Comparison({ store }: { store: WorkbenchStore }) {
   const v = useView(store),
     frame = useInspection(store),
     [channel, setChannel] = useState(16);
+  const [kind, setKind] = useState<
+      "sensorMask" | "hiddenClamp" | "parentWeight"
+    >("sensorMask"),
+    [neuron, setNeuron] = useState(0),
+    [clamp, setClamp] = useState(0),
+    [parameter, setParameter] = useState(0);
   const record = v.comparisons.find((c) => c.id === v.comparisonId),
     tick = frame?.state.tick ?? 0;
   const canRun =
@@ -183,34 +240,116 @@ export function Comparison({ store }: { store: WorkbenchStore }) {
       <div className="panel-heading">
         <div>
           <span className="eyebrow">Matched replay · evaluation only</span>
-          <h2 id="comparison-heading">Sensor intervention</h2>
+          <h2 id="comparison-heading">Sensor & brain interventions</h2>
         </div>
       </div>
       <p>
-        Pause a trial and mask one input to zero. Two private copies start from
-        the same body, food, energy and controller state. Training continues
-        with the original controllers.
+        Pause a trial to mask one input, clamp a hidden activation after tanh,
+        or restore one parent weight. Two private copies start from the same
+        body, food, energy and controller state. Training continues with the
+        original controllers.
       </p>
       <div className="comparison-controls">
         <label>
-          Sensor to mask
+          Intervention
           <select
-            aria-label="Sensor to mask"
-            value={channel}
-            onChange={(e) => setChannel(Number(e.target.value))}
+            aria-label="Intervention type"
+            value={kind}
+            onChange={(e) => setKind(e.target.value as typeof kind)}
             disabled={v.comparing}
           >
-            {INPUT_LABELS.map((label, i) => (
-              <option key={label} value={i}>
-                {i} · {label}
-              </option>
-            ))}
+            <option value="sensorMask">Sensor mask</option>
+            <option value="hiddenClamp">Hidden neuron clamp</option>
+            <option
+              value="parentWeight"
+              disabled={!v.selection?.genome.parentIds.length}
+            >
+              Restore parent weight
+            </option>
           </select>
         </label>
+        {kind === "sensorMask" && (
+          <label>
+            Sensor to mask
+            <select
+              aria-label="Sensor to mask"
+              value={channel}
+              onChange={(e) => setChannel(Number(e.target.value))}
+              disabled={v.comparing}
+            >
+              {INPUT_LABELS.map((label, i) => (
+                <option key={label} value={i}>
+                  {i} · {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {kind === "hiddenClamp" && (
+          <>
+            <label>
+              Hidden neuron
+              <select
+                aria-label="Hidden neuron to clamp"
+                value={neuron}
+                onChange={(e) => setNeuron(Number(e.target.value))}
+              >
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i} value={i}>
+                    H{i}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Clamped activation
+              <input
+                aria-label="Clamped activation"
+                type="number"
+                min={-1}
+                max={1}
+                step={0.1}
+                value={clamp}
+                onChange={(e) => setClamp(Number(e.target.value))}
+              />
+            </label>
+          </>
+        )}
+        {kind === "parentWeight" && (
+          <label>
+            Parameter to restore
+            <input
+              aria-label="Parameter to restore"
+              type="number"
+              min={0}
+              max={277}
+              value={parameter}
+              onChange={(e) => setParameter(Number(e.target.value))}
+            />
+          </label>
+        )}
         <button
           className="primary"
-          disabled={!canRun}
-          onClick={() => void store.compareSensor(channel)}
+          disabled={
+            !canRun ||
+            (kind === "hiddenClamp" &&
+              (!Number.isFinite(clamp) || Math.abs(clamp) > 1)) ||
+            (kind === "parentWeight" &&
+              (!Number.isInteger(parameter) ||
+                parameter < 0 ||
+                parameter > 277))
+          }
+          onClick={() =>
+            void store.compareSensor(
+              channel,
+              undefined,
+              kind === "hiddenClamp"
+                ? { kind, neuron, value: clamp }
+                : kind === "parentWeight"
+                  ? { kind, parameter }
+                  : undefined,
+            )
+          }
         >
           {v.comparing ? "Comparing…" : "Run matched comparison"}
         </button>
@@ -248,7 +387,7 @@ export function Comparison({ store }: { store: WorkbenchStore }) {
               >
                 {v.comparisons.map((c, i) => (
                   <option key={c.id} value={c.id}>
-                    {i + 1} · {INPUT_LABELS[c.intervention.channel]} · decision{" "}
+                    {i + 1} · {label(c.intervention)} · decision{" "}
                     {c.intervention.startTick} ·{" "}
                     {c.source.definition.controller.id.slice(-8)}
                   </option>
@@ -259,9 +398,7 @@ export function Comparison({ store }: { store: WorkbenchStore }) {
               disabled={
                 v.comparing || v.lineageComparing || v.initializing || v.failed
               }
-              onClick={() =>
-                void store.compareSensor(record.intervention.channel, record)
-              }
+              onClick={() => void store.compareSensor(0, record)}
             >
               Replay saved comparison
             </button>

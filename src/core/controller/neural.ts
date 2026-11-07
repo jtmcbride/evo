@@ -21,12 +21,16 @@ export function forward(
   x: Float64Array,
   h: Float64Array,
   out: Float64Array,
+  clamp?: { neuron: number; value: number },
+  rawHidden?: Float64Array,
 ): void {
   for (let j = 0; j < 12; j++) {
     let sum = p[240 + j];
     for (let i = 0; i < 20; i++) sum += p[j * 20 + i] * x[i];
     h[j] = Math.tanh(sum);
+    if (rawHidden) rawHidden[j] = h[j];
   }
+  if (clamp) h[clamp.neuron] = clamp.value;
   for (let j = 0; j < 2; j++) {
     let sum = p[276 + j];
     for (let i = 0; i < 12; i++) sum += p[252 + j * 12 + i] * h[i];

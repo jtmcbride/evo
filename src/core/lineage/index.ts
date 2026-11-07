@@ -2,7 +2,11 @@ import { hash, parameterHash } from "../canonical";
 import { encode } from "../codec";
 import { validateParameters } from "../controller/neural";
 import type { GenerationRecord } from "../experiment";
-import type { ExperimentCheckpoint } from "../evolution";
+import {
+  validateDefinition,
+  type ExperimentCheckpoint,
+  type ExperimentDefinition,
+} from "../evolution";
 import { ENGINE_VERSION, type Genome } from "../model";
 import { validateScenario } from "../world/scenario";
 
@@ -18,7 +22,10 @@ export interface LineageBundle {
   version: 1;
   fromGeneration: number;
   nodes: LineageNode[];
-  generations: (GenerationRecord & { commitId: string })[];
+  generations: (GenerationRecord & {
+    commitId: string;
+    definition?: ExperimentDefinition;
+  })[];
 }
 export const contentHash = (value: unknown) => hash(JSON.parse(encode(value)));
 function integer(v: number) {
@@ -234,7 +241,9 @@ export function validateLineage(
       throw new Error("Lineage does not match the population");
   }
   bundle.generations.forEach((r, index) => {
-    const count = checkpoint.definition.evolution.population;
+    const definition = r.definition ?? checkpoint.definition;
+    validateDefinition(definition);
+    const count = definition.evolution.population;
     if (
       r.generation !== bundle.fromGeneration + index ||
       !digest(r.commitId) ||
@@ -243,7 +252,7 @@ export function validateLineage(
       new Set(r.populationIds).size !== count ||
       !r.populationIds.includes(r.championId) ||
       !Array.isArray(r.scenarios) ||
-      r.scenarios.length !== checkpoint.definition.evolution.trials ||
+      r.scenarios.length !== definition.evolution.trials ||
       !Array.isArray(r.trials) ||
       r.trials.length !== count ||
       !Array.isArray(r.totals) ||
@@ -264,13 +273,14 @@ export function validateLineage(
             "validationScenarios",
             "validation",
             "commitId",
+            "definition",
           ].includes(k),
       )
     )
       throw new Error("Invalid lineage generation");
     [...r.scenarios, ...r.validationScenarios].forEach((s) => {
       validateScenario(s);
-      if (contentHash(s.config) !== contentHash(checkpoint.definition.world))
+      if (contentHash(s.config) !== contentHash(definition.world))
         throw new Error("Lineage scenario configuration mismatch");
     });
     const check = (
@@ -292,17 +302,17 @@ export function validateLineage(
         spec.controllerVersion !== g.parameterHash ||
         !integer(result.foodCollected) ||
         result.foodCollected !== result.score ||
-        result.foodCollected > checkpoint.definition.world.foodCount ||
+        result.foodCollected > definition.world.foodCount ||
         !integer(result.survivalTicks) ||
         result.survivalTicks < 1 ||
-        result.survivalTicks > checkpoint.definition.world.maxTicks ||
+        result.survivalTicks > definition.world.maxTicks ||
         !integer(result.contactTicks) ||
         result.contactTicks > result.survivalTicks ||
         !Number.isFinite(result.distanceTravelled) ||
         result.distanceTravelled < 0 ||
         !Number.isFinite(result.remainingEnergy) ||
         result.remainingEnergy < 0 ||
-        result.remainingEnergy > checkpoint.definition.world.maxEnergy ||
+        result.remainingEnergy > definition.world.maxEnergy ||
         !["timeLimit", "allFoodCollected", "energyExhausted"].includes(
           result.terminalReason,
         )
@@ -322,7 +332,8 @@ export function validateLineage(
     r.validation.forEach((t, trial) =>
       check(t, r.championId, r.validationScenarios[trial].hash),
     );
-    const { commitId, ...record } = r;
+    const { commitId, definition: _definition, ...record } = r;
+    void _definition;
     const nextIds =
       bundle.generations[index + 1]?.populationIds ??
       checkpoint.population.map((g) => g.id);
@@ -336,6 +347,7 @@ export function validateLineage(
         record,
         nextCheckpoint: {
           ...checkpoint,
+          definition,
           generation: r.generation + 1,
           population,
           lastCommitId: null,

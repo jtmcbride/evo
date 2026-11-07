@@ -10,7 +10,10 @@ import {
   type LineageBundle,
 } from "../core/lineage";
 import type { Genome } from "../core/model";
-import type { ExperimentCheckpoint } from "../core/evolution";
+import type {
+  ExperimentCheckpoint,
+  ExperimentDefinition,
+} from "../core/evolution";
 import type { GenerationRecord } from "../core/experiment";
 import { parseSession, type SavedSession } from "./model";
 import { RevisionConflict } from "./repository";
@@ -33,7 +36,7 @@ export interface LineageRow {
 export async function writeGeneration(
   db: LabDatabase,
   id: string,
-  r: GenerationRecord,
+  r: GenerationRecord & { definition?: ExperimentDefinition },
   commitId: string,
 ) {
   await db.memberships.bulkPut(
@@ -55,6 +58,7 @@ export async function writeGeneration(
       scenarioHashes: r.scenarios.map((s) => s.hash),
       validationHashes: r.validationScenarios.map((s) => s.hash),
       recordChecksum: contentHash(r),
+      ...(r.definition ? { definition: r.definition } : {}),
     },
   });
   await db.scenarios.bulkPut(
@@ -286,6 +290,7 @@ export class LineageStorage {
       totals: number[];
       championId: string;
       recordChecksum?: string;
+      definition?: ExperimentDefinition;
     };
     if (
       !Array.isArray(m.populationIds) ||
@@ -317,7 +322,8 @@ export class LineageStorage {
     if (scenarios.some((s) => !s) || trials.some((t) => !t))
       throw new Error("Incomplete retained generation");
     const count = m.scenarioHashes.length;
-    const record: GenerationRecord = {
+    const record: GenerationRecord & { definition?: ExperimentDefinition } = {
+      ...(m.definition ? { definition: m.definition } : {}),
       generation,
       populationIds: m.populationIds,
       scenarios: scenarios

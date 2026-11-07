@@ -65,7 +65,7 @@ export interface EvaluationSpec {
   scenarioHash: string;
   controllerId: string;
   controllerVersion: string;
-  intervention?: SensorMask;
+  intervention?: Intervention;
   hash: string;
 }
 export interface SensorMask {
@@ -74,6 +74,23 @@ export interface SensorMask {
   channel: number;
   startTick: number;
 }
+export interface HiddenClamp {
+  kind: "hiddenClamp";
+  version: 1;
+  neuron: number;
+  value: number;
+  startTick: number;
+}
+export interface ParentWeight {
+  kind: "parentWeight";
+  version: 1;
+  parameter: number;
+  value: number;
+  parentId: string;
+  parentParameterHash: string;
+  startTick: number;
+}
+export type Intervention = SensorMask | HiddenClamp | ParentWeight;
 export interface TrialResult {
   spec: EvaluationSpec;
   foodCollected: number;

@@ -1,6 +1,7 @@
 import { ExperimentRunner } from "../core/experiment";
 import { ComparisonRunner } from "../core/comparison";
 import { ControllerComparisonRunner } from "../core/comparison/controllers";
+import { BranchMatrixRunner } from "../core/branch/matrix";
 import {
   createEpisode,
   restoreEpisode,
@@ -50,6 +51,7 @@ export class SimulationRuntime {
   private checkpointRequest: string | null = null;
   private comparison:
     | (
+        | { kind: "matrix"; requestId: string; runner: BranchMatrixRunner }
         | { kind: "sensor"; requestId: string; runner: ComparisonRunner }
         | {
             kind: "controllers";
@@ -272,6 +274,27 @@ export class SimulationRuntime {
         this.comparison = { kind: "sensor", requestId, runner };
         return;
       }
+      case "compareIntervention": {
+        const p = this.requirePlayback(c.playbackId);
+        if (p.playing || p.seek)
+          throw new Error("Pause playback before comparing");
+        const runner = new ComparisonRunner(p.runner.checkpoint(), c.choice);
+        this.cancelComparison("Comparison replaced");
+        this.comparison = { kind: "sensor", requestId, runner };
+        return;
+      }
+      case "replayIntervention": {
+        const runner = new ComparisonRunner(c.source, c.choice);
+        this.cancelComparison("Comparison replaced");
+        this.comparison = { kind: "sensor", requestId, runner };
+        return;
+      }
+      case "compareBranchMatrix": {
+        const runner = new BranchMatrixRunner(c.input);
+        this.cancelComparison("Comparison replaced");
+        this.comparison = { kind: "matrix", requestId, runner };
+        return;
+      }
       case "replayComparison": {
         const runner = new ComparisonRunner(c.source, c.channel);
         this.cancelComparison("Comparison replaced");
@@ -465,10 +488,15 @@ export class SimulationRuntime {
               type: "comparison",
               comparison: job.runner.result()!,
             });
-          else
+          else if (job.kind === "controllers")
             this.reply(job.requestId, {
               type: "controllerComparison",
               comparison: job.runner.result()!,
+            });
+          else
+            this.reply(job.requestId, {
+              type: "branchMatrix",
+              matrix: job.runner.result()!,
             });
         }
       } catch (error) {

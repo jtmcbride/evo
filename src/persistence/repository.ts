@@ -10,6 +10,9 @@ import {
 } from "./model";
 import type { SensorComparison } from "../core/comparison";
 import type { LineageBundle } from "../core/lineage";
+import type { ExperimentDefinition } from "../core/evolution";
+import { makeBranch } from "./branch";
+import { validateMatrix, type BranchMatrix } from "../core/branch/matrix";
 import {
   initialLineage,
   appendLineage,
@@ -48,6 +51,13 @@ export interface Repository {
   load(id: string): Promise<SavedHandle>;
   activate(id: string): Promise<void>;
   create(session: SavedSession): Promise<SavedHandle>;
+  fork(
+    id: string,
+    revision: number,
+    name: string,
+    definition: ExperimentDefinition,
+  ): Promise<SavedHandle>;
+  saveMatrix(id: string, matrix: BranchMatrix): Promise<void>;
   save(
     id: string,
     revision: number,
@@ -107,6 +117,7 @@ export class MemoryRepository implements Repository {
   private activeId: string | null = null;
   private comparisons = new Map<string, SensorComparison[]>();
   private histories = new Map<string, LineageBundle>();
+  private matrices = new Map<string, BranchMatrix[]>();
   async list() {
     return structuredClone(
       Array.from(this.data.values(), (v) => v.entry).sort(
@@ -128,6 +139,9 @@ export class MemoryRepository implements Repository {
           h.session.comparisons,
           this.comparisons.get(id),
         ),
+        ...(this.matrices.get(id)?.length
+          ? { matrices: this.matrices.get(id) }
+          : {}),
       },
     });
   }
@@ -142,6 +156,7 @@ export class MemoryRepository implements Repository {
     const lineage = initialLineage(session);
     this.data.set(id, structuredClone(h));
     this.histories.set(id, lineage);
+    this.matrices.set(id, structuredClone(session.matrices ?? []));
     this.comparisons.set(id, structuredClone(session.comparisons ?? []));
     this.activeId = id;
     return structuredClone(h);
@@ -215,6 +230,33 @@ export class MemoryRepository implements Repository {
     const bundle = this.histories.get(id);
     if (!bundle) throw new Error("Saved lineage not found");
     return structuredClone(bundle);
+  }
+  async fork(
+    id: string,
+    revision: number,
+    name: string,
+    definition: ExperimentDefinition,
+  ) {
+    const source = await this.load(id);
+    if (source.entry.revision !== revision) throw new RevisionConflict();
+    const lineage = await this.exportLineage(id, revision),
+      session = makeBranch(source, lineage, name, definition);
+    if (this.data.get(id)!.entry.revision !== revision)
+      throw new RevisionConflict();
+    return this.create(session);
+  }
+  async saveMatrix(id: string, matrix: BranchMatrix) {
+    if (!this.data.has(id)) throw new Error("Saved experiment not found");
+    validateMatrix(matrix);
+    const rows = this.matrices.get(id) ?? [],
+      old = rows.find((m) => m.id === matrix.id);
+    if (old && hash(encode(old)) !== hash(encode(matrix)))
+      throw new Error("Matrix replay differs from the saved record");
+    if (!old) {
+      if (rows.length >= 8)
+        throw new Error("This experiment already retains eight matrices");
+      this.matrices.set(id, [...rows, structuredClone(matrix)]);
+    }
   }
   close() {}
 }

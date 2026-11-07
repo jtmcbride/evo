@@ -1,14 +1,20 @@
 import { Random, type RandomState } from "../random";
 import { forward, validateParameters } from "./neural";
+import type { HiddenClamp, ParentWeight } from "../model";
 export type ControllerDefinition =
   | { kind: "scripted"; id: string }
   | { kind: "constant"; id: string; left: number; right: number }
   | { kind: "neural"; id: string; parameters: Float32Array }
   | { kind: "random"; id: string; seed: string };
 export interface Controller {
-  act(inputs: Float64Array, outputs: Float64Array): void;
+  act(
+    inputs: Float64Array,
+    outputs: Float64Array,
+    intervention?: HiddenClamp | ParentWeight,
+  ): void;
   state(): RandomState | null;
   hidden(): Float64Array | null;
+  rawHidden(): Float64Array | null;
 }
 export function createController(
   definition: ControllerDefinition,
@@ -39,14 +45,37 @@ export function createController(
   if (def.kind !== "random" && state != null)
     throw new Error("Unexpected controller state");
   const hidden = def.kind === "neural" ? new Float64Array(12) : null;
+  const raw = hidden?.slice() ?? null;
+  let overridden: Float32Array | null = null,
+    overrideKey = "",
+    clamped = false;
   return {
     state: () => random?.state() ?? null,
     hidden: () => hidden?.slice() ?? null,
-    act(inputs, out) {
+    rawHidden: () => (clamped ? raw!.slice() : null),
+    act(inputs, out, intervention) {
       if (inputs.length !== 20 || !inputs.every(Number.isFinite))
         throw new Error("Invalid observations");
       if (def.kind === "neural") {
-        forward(def.parameters, inputs, hidden!, out);
+        clamped = intervention?.kind === "hiddenClamp";
+        let parameters = def.parameters;
+        if (intervention?.kind === "parentWeight") {
+          const key = `${intervention.parameter}:${intervention.value}`;
+          if (key !== overrideKey) {
+            overridden = def.parameters.slice();
+            overridden[intervention.parameter] = intervention.value;
+            overrideKey = key;
+          }
+          parameters = overridden!;
+        }
+        forward(
+          parameters,
+          inputs,
+          hidden!,
+          out,
+          clamped ? (intervention as HiddenClamp) : undefined,
+          clamped ? raw! : undefined,
+        );
         return;
       }
       if (def.kind === "random") {

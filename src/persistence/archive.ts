@@ -24,7 +24,12 @@ function parameterBytes(p: Float32Array) {
 const manifestSchema = z
   .object({
     format: z.literal("evolution-lab"),
-    formatVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    formatVersion: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+    ]),
     engineVersion: z.string().max(100),
     kind: z.enum(["checkpoint", "lineage"]),
     ancestry: z.enum(["partial", "complete"]),
@@ -68,6 +73,14 @@ export function createArchive(value: SavedSession): Uint8Array {
       files[parameterPath(key)] = parameterBytes(controller.parameters);
       return {
         ...c,
+        ...(c.restoration
+          ? {
+              restoration: {
+                parent: external(c.restoration.parent),
+                child: external(c.restoration.child),
+              },
+            }
+          : {}),
         source: {
           ...c.source,
           definition: {
@@ -77,6 +90,17 @@ export function createArchive(value: SavedSession): Uint8Array {
         },
       };
     }),
+    ...(session.matrices
+      ? {
+          matrices: session.matrices.map((m) => ({
+            ...m,
+            controllers: m.controllers.map((c) => ({
+              ...c,
+              genome: external(c.genome),
+            })),
+          })),
+        }
+      : {}),
   };
   if (session.lineage) {
     const blocks: Uint8Array[] = [],
@@ -116,7 +140,15 @@ export function createArchive(value: SavedSession): Uint8Array {
   files["session.json"] = strToU8(encode(data));
   const manifest = {
     format: "evolution-lab",
-    formatVersion: session.lineage ? 3 : 2,
+    formatVersion:
+      session.branchOrigins?.length ||
+      session.matrices?.length ||
+      session.comparisons?.some((c) => c.intervention.kind !== "sensorMask") ||
+      session.lineage?.generations.some((r) => r.definition)
+        ? 4
+        : session.lineage
+          ? 3
+          : 2,
     engineVersion: ENGINE_VERSION,
     kind: session.lineage ? "lineage" : "checkpoint",
     ancestry: session.lineage?.fromGeneration === 0 ? "complete" : "partial",
@@ -257,7 +289,7 @@ export function readArchive(bytes: Uint8Array): SavedSession {
   if (
     manifest.formatVersion < 3
       ? manifest.kind !== "checkpoint" || manifest.ancestry !== "partial"
-      : manifest.kind !== "lineage"
+      : manifest.formatVersion === 3 && manifest.kind !== "lineage"
   )
     throw new Error("Invalid archive kind or ancestry version");
   const names = new Set(manifest.entries.map((e) => e.path));
@@ -294,7 +326,7 @@ export function readArchive(bytes: Uint8Array): SavedSession {
         typeof key !== "string" ||
         !/^[a-f0-9]{64}$/.test(key) ||
         (aggregate &&
-          (manifest.formatVersion !== 3 ||
+          (manifest.formatVersion < 3 ||
             !Number.isInteger(reference.offset) ||
             reference.offset! < 0 ||
             reference.offset! % 1112 !== 0))
@@ -347,5 +379,13 @@ export function readArchive(bytes: Uint8Array): SavedSession {
   const session = parseSession(decode(JSON.stringify(raw)));
   if (manifest.formatVersion === 1 && session.comparisons?.length)
     throw new Error("Comparisons require archive version 2");
+  if (
+    manifest.formatVersion < 4 &&
+    (session.branchOrigins?.length ||
+      session.matrices?.length ||
+      session.comparisons?.some((c) => c.intervention.kind !== "sensorMask") ||
+      session.lineage?.generations.some((r) => r.definition))
+  )
+    throw new Error("Branch and extended records require archive version 4");
   return session;
 }

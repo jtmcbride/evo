@@ -25,6 +25,9 @@ import {
 } from "./lineage-database";
 import type { LineageQuery } from "./lineage";
 import type { ExperimentCheckpoint } from "../core/evolution";
+import type { ExperimentDefinition } from "../core/evolution";
+import { makeBranch } from "./branch";
+import { validateMatrix, type BranchMatrix } from "../core/branch/matrix";
 interface CheckpointRow {
   experimentId: string;
   generation: number;
@@ -37,6 +40,10 @@ interface DataRow {
   data: unknown;
 }
 export class LabDatabase extends Dexie {
+  matrices!: Table<
+    { experimentId: string; key: string; payload: string; checksum: string },
+    [string, string]
+  >;
   lineageNodes!: Table<LineageRow, [string, string]>;
   lineageMeta!: Table<{ experimentId: string; fromGeneration: number }, string>;
   experiments!: Table<SavedEntry, string>;
@@ -73,6 +80,7 @@ export class LabDatabase extends Dexie {
         "[experimentId+key],experimentId,[experimentId+parentId+birthGeneration+key]",
       lineageMeta: "experimentId",
     });
+    this.version(4).stores({ matrices: "[experimentId+key],experimentId" });
   }
 }
 function prepareRows(id: string, session: SavedSession) {
@@ -89,7 +97,12 @@ function prepareRows(id: string, session: SavedSession) {
   if (session.bookmark)
     scenarios.set(session.bookmark.scenario.hash, session.bookmark.scenario);
   // Numerical checkpoint payloads stay small; comparison records have independent checksums.
-  const payload = encode({ ...session, comparisons: [], lineage: undefined }),
+  const payload = encode({
+      ...session,
+      comparisons: [],
+      lineage: undefined,
+      matrices: undefined,
+    }),
     trials: DataRow[] = [],
     evaluations: DataRow[] = [];
   const result = (data: unknown, key: string) =>
@@ -162,6 +175,7 @@ export class IndexedRepository implements Repository {
       this.db.experiments,
       this.db.checkpoints,
       this.db.comparisons,
+      this.db.matrices,
       async () => {
         const entry = await this.db.experiments.get(id);
         if (!entry) throw new Error("Saved experiment not found");
@@ -173,20 +187,48 @@ export class IndexedRepository implements Repository {
           handle.session.comparisons,
           records,
         );
+        const matrices = await this.db.matrices
+          .where("experimentId")
+          .equals(id)
+          .toArray();
+        if (matrices.length > 8)
+          throw new Error("Excessive saved branch matrices");
+        if (matrices.length)
+          handle.session.matrices = matrices.map((row) => {
+            if (hash(row.payload) !== row.checksum)
+              throw new Error("Saved matrix checksum mismatch");
+            const m = decode(row.payload) as BranchMatrix;
+            validateMatrix(m);
+            if (m.id !== row.key)
+              throw new Error("Saved matrix identity mismatch");
+            return m;
+          });
         return handle;
       },
     );
   }
   async create(value: SavedSession) {
-    const session = parseSession(value),
-      id = crypto.randomUUID(),
+    return this.insert(parseSession(value));
+  }
+  private async insert(
+    session: SavedSession,
+    expected?: { id: string; revision: number },
+  ) {
+    const id = crypto.randomUUID(),
       rows = prepareRows(id, session),
       entry = entryFor(id, 0, {
         ...session,
         comparisons: [],
         lineage: undefined,
+        matrices: undefined,
       });
     await this.db.transaction("rw", this.db.tables, async () => {
+      if (
+        expected &&
+        (await this.db.experiments.get(expected.id))?.revision !==
+          expected.revision
+      )
+        throw new RevisionConflict();
       await this.writeRows(id, session, rows);
       await this.db.experiments.add(entry);
       await this.db.meta.put({ key: "active", value: id });
@@ -231,12 +273,22 @@ export class IndexedRepository implements Repository {
         this.decode(oldRow, previous).session.checkpoint,
       );
       if (commit) {
-        await writeGeneration(this.db, id, commit.record, commit.id);
+        await writeGeneration(
+          this.db,
+          id,
+          { ...commit.record, definition: session.checkpoint.definition },
+          commit.id,
+        );
       }
       const entry = entryFor(
         id,
         revision + 1,
-        { ...session, comparisons: [], lineage: undefined },
+        {
+          ...session,
+          comparisons: [],
+          lineage: undefined,
+          matrices: undefined,
+        },
         interrupted,
       );
       await this.db.experiments.put(entry);
@@ -260,6 +312,8 @@ export class IndexedRepository implements Repository {
     await this.lineageStorage.capture(id, session, previous);
     for (const c of session.comparisons ?? [])
       await this.writeComparison(id, c);
+    for (const matrix of session.matrices ?? [])
+      await this.writeMatrix(id, matrix);
     await this.db.genomes.bulkPut(
       rows.genomes.map(({ parameters, ...g }) => {
         void parameters;
@@ -298,6 +352,49 @@ export class IndexedRepository implements Repository {
   }
   exportLineage(id: string, revision: number) {
     return this.lineageStorage.export(id, revision);
+  }
+  async fork(
+    id: string,
+    revision: number,
+    name: string,
+    definition: ExperimentDefinition,
+  ) {
+    const source = await this.load(id);
+    if (source.entry.revision !== revision) throw new RevisionConflict();
+    const lineage = await this.exportLineage(id, revision),
+      session = makeBranch(source, lineage, name, definition);
+    return this.insert(session, { id, revision });
+  }
+  private async writeMatrix(id: string, matrix: BranchMatrix) {
+    const payload = encode(matrix),
+      checksum = hash(payload),
+      old = await this.db.matrices.get([id, matrix.id]);
+    if (old) {
+      if (old.checksum !== checksum || hash(old.payload) !== checksum)
+        throw new Error("Matrix replay differs from the saved record");
+      return;
+    }
+    if ((await this.db.matrices.where("experimentId").equals(id).count()) >= 8)
+      throw new Error("This experiment already retains eight matrices");
+    await this.db.matrices.add({
+      experimentId: id,
+      key: matrix.id,
+      payload,
+      checksum,
+    });
+  }
+  async saveMatrix(id: string, matrix: BranchMatrix) {
+    validateMatrix(matrix);
+    await this.db.transaction(
+      "rw",
+      this.db.experiments,
+      this.db.matrices,
+      async () => {
+        if (!(await this.db.experiments.get(id)))
+          throw new Error("Saved experiment not found");
+        await this.writeMatrix(id, matrix);
+      },
+    );
   }
   private async readComparisons(id: string) {
     const rows = await this.db.comparisons

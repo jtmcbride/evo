@@ -4,15 +4,27 @@ import {
   type Genome,
   type Scenario,
   type TrialResult,
+  type WorldConfig,
 } from "../core/model";
+import {
+  validateOrigins,
+  checkpointHash,
+  type BranchOrigin,
+} from "../core/branch";
+import { validateMatrix, type BranchMatrix } from "../core/branch/matrix";
 import {
   validateCheckpoint,
   type ExperimentCheckpoint,
 } from "../core/evolution";
 import { hash, parameterHash } from "../core/canonical";
 import { validateScenario } from "../core/world/scenario";
-import { comparisonId, type SensorComparison } from "../core/comparison";
-import { restoreEpisode, validateSensorMask } from "../core/episode";
+import {
+  comparisonId,
+  comparisonChoice,
+  ComparisonRunner,
+  type SensorComparison,
+} from "../core/comparison";
+import { restoreEpisode, validateIntervention } from "../core/episode";
 import {
   validateLineage,
   reconstructGenome,
@@ -20,6 +32,7 @@ import {
   type LineageBundle,
 } from "../core/lineage";
 export interface Settings {
+  body?: { bodyRadius: number; sensorRange: number; vMax: number };
   name: string;
   preset: "open" | "obstacles";
   seed: string;
@@ -87,6 +100,8 @@ export interface SavedSession {
   bookmark: Bookmark | null;
   comparisons?: SensorComparison[];
   lineage?: LineageBundle;
+  branchOrigins?: BranchOrigin[];
+  matrices?: BranchMatrix[];
   provenance: {
     created: RuntimeFingerprint;
     current: RuntimeFingerprint;
@@ -193,13 +208,36 @@ const result = z
         controllerId: str,
         controllerVersion: digest,
         intervention: z
-          .object({
-            kind: z.literal("sensorMask"),
-            version: z.literal(1),
-            channel: integer.max(19),
-            startTick: integer.max(5397),
-          })
-          .strict()
+          .discriminatedUnion("kind", [
+            z
+              .object({
+                kind: z.literal("sensorMask"),
+                version: z.literal(1),
+                channel: integer.max(19),
+                startTick: integer.max(5397),
+              })
+              .strict(),
+            z
+              .object({
+                kind: z.literal("hiddenClamp"),
+                version: z.literal(1),
+                neuron: integer.max(11),
+                value: finite.min(-1).max(1),
+                startTick: integer.max(5397),
+              })
+              .strict(),
+            z
+              .object({
+                kind: z.literal("parentWeight"),
+                version: z.literal(1),
+                parameter: integer.max(277),
+                value: finite,
+                parentId: str,
+                parentParameterHash: digest,
+                startTick: integer.max(5397),
+              })
+              .strict(),
+          ])
           .optional(),
         hash: digest,
       })
@@ -225,6 +263,7 @@ const trace = z
     heading: finite,
     inputs: z.array(finite.min(-1).max(1)).length(20),
     rawInputs: z.array(finite.min(-1).max(1)).length(20).optional(),
+    rawHidden: z.array(finite.min(-1).max(1)).length(12).optional(),
     hidden: z.array(finite.min(-1).max(1)).length(12).nullable(),
     outputs: z.array(finite.min(-1).max(1)).length(2),
   })
@@ -246,6 +285,10 @@ const comparison = z
     version: z.literal(1),
     id: digest,
     intervention: result.shape.spec.shape.intervention.unwrap(),
+    restoration: z
+      .object({ parent: genome, child: genome })
+      .strict()
+      .optional(),
     source: z
       .object({
         formatVersion: z.literal(1),
@@ -320,6 +363,14 @@ const comparison = z
   .strict();
 const settings = z
   .object({
+    body: z
+      .object({
+        bodyRadius: finite.positive(),
+        sensorRange: finite.positive(),
+        vMax: finite.positive(),
+      })
+      .strict()
+      .optional(),
     name: z
       .string()
       .min(1)
@@ -426,6 +477,8 @@ const schema = z
       .nullable(),
     comparisons: z.array(comparison).max(32).default([]),
     lineage: z.custom<LineageBundle>().optional(),
+    branchOrigins: z.array(z.custom<BranchOrigin>()).max(16).optional(),
+    matrices: z.array(z.custom<BranchMatrix>()).max(8).optional(),
     provenance: z
       .object({
         created: runtime,
@@ -485,12 +538,13 @@ export function parseComparison(value: unknown): SensorComparison {
   const c = comparison.parse(value) as SensorComparison;
   const scenario = c.source.definition.scenario,
     controller = c.source.definition.controller;
-  validateSensorMask(c.intervention, scenario.config.maxTicks);
+  validateIntervention(c.intervention, scenario.config.maxTicks);
+  new ComparisonRunner(c.source, comparisonChoice(c));
   const aligned = restoreEpisode(c.source);
   if (
     c.intervention.startTick !== Math.ceil(c.source.state.tick / 3) * 3 ||
     aligned.result() ||
-    c.id !== comparisonId(c.source, c.intervention)
+    c.id !== comparisonId(c.source, c.intervention, c.restoration)
   )
     throw new Error("Invalid comparison source");
   aligned.advance(c.intervention.startTick - c.source.state.tick);
@@ -538,13 +592,43 @@ export function parseComparison(value: unknown): SensorComparison {
   }
   const a = c.control.firstDecision,
     b = c.masked.firstDecision;
+  const variant = c.intervention;
+  let valid: boolean;
+  if (variant.kind === "sensorMask")
+    valid =
+      !c.restoration &&
+      !!b.rawInputs &&
+      b.rawInputs.every((v, i) => Object.is(v, a.inputs[i])) &&
+      b.inputs.every((v, i) =>
+        Object.is(v, i === variant.channel ? 0 : b.rawInputs![i]),
+      );
+  else {
+    valid = !b.rawInputs && b.inputs.every((v, i) => Object.is(v, a.inputs[i]));
+    if (variant.kind === "hiddenClamp")
+      valid &&=
+        !c.restoration &&
+        !!b.rawHidden &&
+        !!a.hidden &&
+        !!b.hidden &&
+        b.rawHidden.every((v, i) => Object.is(v, a.hidden![i])) &&
+        b.hidden.every((v, i) =>
+          Object.is(v, i === variant.neuron ? variant.value : b.rawHidden![i]),
+        );
+    else {
+      const r = c.restoration;
+      if (r) {
+        validateGenome(r.parent);
+        validateGenome(r.child);
+      }
+      valid &&=
+        !!r &&
+        variant.parentId === r.parent.id &&
+        variant.parentParameterHash === r.parent.parameterHash &&
+        Object.is(variant.value, r.parent.parameters[variant.parameter]);
+    }
+  }
   if (
-    !b.rawInputs ||
-    b.rawInputs.some((v, i) => !Object.is(v, a.inputs[i])) ||
-    b.inputs.some(
-      (v, i) =>
-        !Object.is(v, i === c.intervention.channel ? 0 : b.rawInputs![i]),
-    ) ||
+    !valid ||
     c.actionDifferences.changed > c.actionDifferences.compared ||
     c.actionDifferences.compared !==
       Math.ceil(
@@ -583,9 +667,46 @@ export function parseSession(value: unknown): SavedSession {
   if (new Set(s.comparisons.map((c) => c.id)).size !== s.comparisons.length)
     throw new Error("Duplicate comparison");
   validateCheckpoint(s.checkpoint);
+  if (s.branchOrigins) validateOrigins(s.branchOrigins, s.checkpoint);
+  for (const origin of s.branchOrigins ?? []) {
+    schema.shape.checkpoint.shape.definition.parse(origin.definition);
+    schema.shape.checkpoint.shape.definition.parse(origin.source.definition);
+  }
+  for (const record of s.lineage?.generations ?? [])
+    if (record.definition)
+      schema.shape.checkpoint.shape.definition.parse(record.definition);
+  if (s.matrices) {
+    s.matrices.forEach(validateMatrix);
+    if (new Set(s.matrices.map((m) => m.id)).size !== s.matrices.length)
+      throw new Error("Duplicate branch matrix");
+  }
   if (s.lineage) validateLineage(s.lineage, s.checkpoint);
   if (s.lineage) {
     const nodes = new Map(s.lineage.nodes.map((n) => [n.genome.id, n]));
+    for (const origin of s.branchOrigins ?? []) {
+      const source = origin.source;
+      if (
+        source.generation < s.lineage.fromGeneration &&
+        source.members.some((m) => !nodes.has(m.id))
+      )
+        continue;
+      const population = source.members.map((m) => {
+        const g = reconstructGenome(m.id, (id) => nodes.get(id));
+        if (g.parameterHash !== m.parameterHash)
+          throw new Error("Branch source membership hash mismatch");
+        return g;
+      });
+      if (
+        checkpointHash({
+          ...s.checkpoint,
+          generation: source.generation,
+          definition: source.definition,
+          population,
+          lastCommitId: source.lastCommitId,
+        }) !== source.checkpointHash
+      )
+        throw new Error("Branch source checkpoint hash mismatch");
+    }
     const references = [
       ...s.replays.map((r) => r.genome),
       ...(s.bookmark ? [s.bookmark.genome] : []),
@@ -612,7 +733,11 @@ export function parseSession(value: unknown): SavedSession {
     def.evolution.elites !== config.elites ||
     def.evolution.immigrants !== config.immigrants ||
     def.evolution.mutationSigma !== config.mutationSigma ||
-    def.evolution.mutationProbability !== config.mutationProbability
+    def.evolution.mutationProbability !== config.mutationProbability ||
+    (config.body &&
+      Object.entries(config.body).some(
+        ([k, v]) => def.world[k as keyof WorldConfig] !== v,
+      ))
   )
     throw new Error("Saved settings do not match the checkpoint");
   const seen = new Set<number>();
@@ -621,7 +746,7 @@ export function parseSession(value: unknown): SavedSession {
     if (
       h.generation <= lastGeneration ||
       h.median > h.best ||
-      h.best > def.world.foodCount
+      h.best > definitionForGeneration(s, h.generation).world.foodCount
     )
       throw new Error("Invalid generation measurements");
     lastGeneration = h.generation;
@@ -676,6 +801,13 @@ export function parseSession(value: unknown): SavedSession {
       );
   }
   return s;
+}
+export function definitionForGeneration(s: SavedSession, generation: number) {
+  let definition =
+    s.branchOrigins?.[0]?.source.definition ?? s.checkpoint.definition;
+  for (const origin of s.branchOrigins ?? [])
+    if (generation >= origin.source.generation) definition = origin.definition;
+  return definition;
 }
 export function withRuntime(
   s: SavedSession,

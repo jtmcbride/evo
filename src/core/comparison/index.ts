@@ -2,11 +2,27 @@ import { hash } from "../canonical";
 import { encode } from "../codec";
 import {
   restoreEpisode,
-  validateSensorMask,
+  validateIntervention,
   type EpisodeCheckpoint,
   type DecisionTrace,
 } from "../episode";
-import type { SensorMask, TrialResult } from "../model";
+import type { Intervention, Genome, TrialResult } from "../model";
+import { parameterHash } from "../canonical";
+import { validateParameters } from "../controller/neural";
+export interface Restoration {
+  parent: Genome;
+  child: Genome;
+}
+export type InterventionChoice =
+  | { kind: "sensorMask"; channel: number }
+  | { kind: "hiddenClamp"; neuron: number; value: number }
+  | { kind: "parentWeight"; parameter: number; restoration: Restoration };
+export function comparisonChoice(record: SensorComparison): InterventionChoice {
+  const v = record.intervention;
+  return v.kind === "parentWeight"
+    ? { kind: v.kind, parameter: v.parameter, restoration: record.restoration! }
+    : v;
+}
 
 export interface TrajectoryPoint {
   tick: number;
@@ -22,37 +38,78 @@ export interface SensorComparison {
   version: 1;
   id: string;
   source: EpisodeCheckpoint;
-  intervention: SensorMask;
+  intervention: Intervention;
+  restoration?: Restoration;
   control: ComparisonArm;
   masked: ComparisonArm;
   actionDifferences: { changed: number; compared: number };
 }
 export function comparisonId(
   source: EpisodeCheckpoint,
-  intervention: SensorMask,
+  intervention: Intervention,
+  restoration?: Restoration,
 ) {
-  return hash({ version: 1, source: JSON.parse(encode(source)), intervention });
+  return hash({
+    version: 1,
+    source: JSON.parse(encode(source)),
+    intervention,
+    ...(restoration ? { restoration: JSON.parse(encode(restoration)) } : {}),
+  });
 }
 /** Owns two private forks. No experiment, genome, or playback state is shared. */
 export class ComparisonRunner {
   private source: EpisodeCheckpoint;
-  private intervention: SensorMask;
+  private intervention: Intervention;
+  private restoration?: Restoration;
   private control;
   private masked;
   private paths: [TrajectoryPoint[], TrajectoryPoint[]] = [[], []];
   private first: [DecisionTrace | null, DecisionTrace | null] = [null, null];
   private differences = { changed: 0, compared: 0 };
-  constructor(source: EpisodeCheckpoint, channel: number) {
+  constructor(
+    source: EpisodeCheckpoint,
+    operation: number | InterventionChoice,
+  ) {
     if (source.definition.intervention)
       throw new Error("Comparison requires an unmodified source episode");
     this.source = structuredClone(source);
-    this.intervention = {
-      kind: "sensorMask",
-      version: 1,
-      channel,
+    const choice =
+      typeof operation === "number"
+        ? { kind: "sensorMask" as const, channel: operation }
+        : operation;
+    const timing = {
+      version: 1 as const,
       startTick: Math.ceil(source.state.tick / 3) * 3,
     };
-    validateSensorMask(
+    if (choice.kind === "parentWeight") {
+      const { parent, child } = choice.restoration;
+      for (const g of [parent, child]) {
+        validateParameters(g.parameters);
+        if (parameterHash(g.parameters) !== g.parameterHash)
+          throw new Error("Restoration parameter checksum mismatch");
+      }
+      if (
+        child.parentIds[0] !== parent.id ||
+        parent.birthGeneration >= child.birthGeneration ||
+        source.definition.controller.kind !== "neural" ||
+        source.definition.controller.id !== child.id ||
+        parameterHash(source.definition.controller.parameters) !==
+          child.parameterHash
+      )
+        throw new Error(
+          "Restoration requires the actual parent of the selected controller",
+        );
+      this.restoration = structuredClone(choice.restoration);
+      this.intervention = {
+        kind: choice.kind,
+        parameter: choice.parameter,
+        value: parent.parameters[choice.parameter],
+        parentId: parent.id,
+        parentParameterHash: parent.parameterHash,
+        ...timing,
+      };
+    } else this.intervention = { ...choice, ...timing };
+    validateIntervention(
       this.intervention,
       source.definition.scenario.config.maxTicks,
     );
@@ -104,9 +161,10 @@ export class ComparisonRunner {
     if (!this.done) return null;
     return structuredClone({
       version: 1,
-      id: comparisonId(this.source, this.intervention),
+      id: comparisonId(this.source, this.intervention, this.restoration),
       source: this.source,
       intervention: this.intervention,
+      ...(this.restoration ? { restoration: this.restoration } : {}),
       control: {
         result: this.control.result()!,
         trajectory: this.paths[0],

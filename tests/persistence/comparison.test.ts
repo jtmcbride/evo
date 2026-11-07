@@ -80,7 +80,8 @@ test("imports M6 version-one archives and rejects invalid comparison references"
     parseSession({ ...session, comparisons: [comparison, comparison] }),
   ).toThrow(/Duplicate/);
   const wrong = structuredClone(comparison);
-  wrong.masked.result.spec.intervention!.channel = 2;
+  if (wrong.masked.result.spec.intervention?.kind === "sensorMask")
+    wrong.masked.result.spec.intervention.channel = 2;
   expect(() => parseComparison(wrong)).toThrow();
 });
 test("comparison writes are independent of population revisions and survive concurrent generation saves", async () => {
@@ -123,33 +124,29 @@ test("comparison writes are independent of population revisions and survive conc
 test("upgrades an existing M6 database without rewriting its checkpoint or checksum", async () => {
   const name = `legacy-${crypto.randomUUID()}`,
     old = new Dexie(name);
-  old
-    .version(1)
-    .stores({
-      experiments: "id,updatedAt",
-      checkpoints: "[experimentId+generation],experimentId",
-      genomes: "[experimentId+key],experimentId",
-      parameters: "hash",
-      memberships: "[experimentId+key],experimentId",
-      generations: "[experimentId+key],experimentId",
-      scenarios: "hash",
-      evaluations: "[experimentId+key],experimentId",
-      trials: "[experimentId+key],experimentId",
-      meta: "key",
-    });
+  old.version(1).stores({
+    experiments: "id,updatedAt",
+    checkpoints: "[experimentId+generation],experimentId",
+    genomes: "[experimentId+key],experimentId",
+    parameters: "hash",
+    memberships: "[experimentId+key],experimentId",
+    generations: "[experimentId+key],experimentId",
+    scenarios: "hash",
+    evaluations: "[experimentId+key],experimentId",
+    trials: "[experimentId+key],experimentId",
+    meta: "key",
+  });
   const session = savedFixture("legacy");
   delete session.comparisons;
   const entry = entryFor("legacy", 7, session),
     payload = encode(session);
   await old.table("experiments").put(entry);
-  await old
-    .table("checkpoints")
-    .put({
-      experimentId: entry.id,
-      generation: 0,
-      payload,
-      checksum: entry.checksum,
-    });
+  await old.table("checkpoints").put({
+    experimentId: entry.id,
+    generation: 0,
+    payload,
+    checksum: entry.checksum,
+  });
   await old.table("meta").put({ key: "active", value: entry.id });
   old.close();
   const current = new IndexedRepository(name);

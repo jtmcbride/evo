@@ -57,7 +57,7 @@ test("retains unsuccessful births, sparse patches and original trials across ful
     const bytes = createArchive({ ...session, lineage }),
       files = unzipSync(bytes),
       manifest = JSON.parse(strFromU8(files["manifest.json"]));
-    expect(manifest.formatVersion).toBe(3);
+    expect(manifest.formatVersion).toBe(4);
     expect(manifest.ancestry).toBe("complete");
     expect(files["lineage-parameters.f32"]).toBeDefined();
     const restored = readArchive(bytes);
