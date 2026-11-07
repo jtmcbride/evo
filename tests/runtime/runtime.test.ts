@@ -117,6 +117,70 @@ test("training matches core with independent inspection, stepping and seeking", 
   expect(h.runtime.status().generation).toBe(1);
   expect(h.runtime.needsWork).toBe(false);
 });
+test("comparison forks a paused replay without changing playback or training commits", () => {
+  const h = setup(),
+    baseline = new ExperimentRunner(h.checkpoint);
+  while (baseline.phase !== "awaitingCommit") baseline.advance(10000);
+  h.send({ type: "openPlayback", playbackId: "p", definition: h.playback });
+  h.send({ type: "stepPlayback", playbackId: "p", mode: "tick" });
+  const request = h.send({
+    type: "comparePlayback",
+    ...h.scope,
+    playbackId: "p",
+    channel: 16,
+  });
+  h.send({ type: "startTraining", ...h.scope, generations: 1 });
+  h.until(
+    () =>
+      commits(h.events).length === 1 &&
+      h.events.some((e) => e.type === "reply" && e.requestId === request),
+  );
+  expect(commits(h.events)[0].commit).toEqual(baseline.pendingCommit());
+  const reply = h.events.find(
+    (e) => e.type === "reply" && e.requestId === request,
+  );
+  expect(
+    reply?.type === "reply" &&
+      reply.data.type === "comparison" &&
+      reply.data.comparison.intervention.startTick,
+  ).toBe(3);
+  const inspect = h.send({ type: "inspectPlayback", playbackId: "p" });
+  expect(
+    h.events.some(
+      (e) =>
+        e.type === "reply" &&
+        e.requestId === inspect &&
+        e.data.type === "playback" &&
+        e.data.snapshot.state.tick === 1,
+    ),
+  ).toBe(true);
+  const cancel = h.send({
+    type: "comparePlayback",
+    ...h.scope,
+    playbackId: "p",
+    channel: 1,
+  });
+  h.send({ type: "cancelRequest", targetRequestId: cancel });
+  expect(
+    h.events.some(
+      (e) =>
+        e.type === "error" && e.requestId === cancel && e.code === "CANCELLED",
+    ),
+  ).toBe(true);
+  const replace = h.send({
+    type: "comparePlayback",
+    ...h.scope,
+    playbackId: "p",
+    channel: 1,
+  });
+  h.send({ type: "initialize", checkpoint: h.checkpoint });
+  expect(
+    h.events.some(
+      (e) =>
+        e.type === "error" && e.requestId === replace && e.code === "CANCELLED",
+    ),
+  ).toBe(true);
+});
 test("pause and checkpoint barriers preserve pending commits and handle failed saves", () => {
   const h = setup();
   h.send({ type: "startTraining", ...h.scope, generations: 2 });

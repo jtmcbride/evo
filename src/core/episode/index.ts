@@ -1,5 +1,10 @@
 import { type RandomState } from "../random";
-import { ENGINE_VERSION, type Scenario, type TrialResult } from "../model";
+import {
+  ENGINE_VERSION,
+  type Scenario,
+  type TrialResult,
+  type SensorMask,
+} from "../model";
 import { parameterHash, hash } from "../canonical";
 import { createController, type ControllerDefinition } from "../controller";
 import { validateScenario } from "../world/scenario";
@@ -9,6 +14,7 @@ export interface EpisodeDefinition {
   scenario: Scenario;
   controller: ControllerDefinition;
   trace?: boolean;
+  intervention?: SensorMask;
 }
 export interface EpisodeState extends SenseState {
   tick: number;
@@ -25,6 +31,7 @@ export interface DecisionTrace {
   y: number;
   heading: number;
   inputs: number[];
+  rawInputs?: number[];
   hidden: number[] | null;
   outputs: number[];
 }
@@ -124,6 +131,8 @@ export class EpisodeRunner {
   private outputs = new Float64Array(2);
   constructor(def: EpisodeDefinition) {
     validateScenario(def.scenario);
+    if (def.intervention)
+      validateSensorMask(def.intervention, def.scenario.config.maxTicks);
     this.definition = structuredClone(def);
     this.controller = createController(this.definition.controller);
     const s = def.scenario;
@@ -163,6 +172,10 @@ export class EpisodeRunner {
       dt = 1 / 30;
     if (s.tick % 3 === 0) {
       observe(world, s, this.inputs);
+      const mask = this.definition.intervention;
+      const rawInputs =
+        mask && s.tick >= mask.startTick ? Array.from(this.inputs) : undefined;
+      if (rawInputs) this.inputs[mask!.channel] = 0;
       this.controller.act(this.inputs, this.outputs);
       if (
         !this.outputs.every(Number.isFinite) ||
@@ -176,6 +189,7 @@ export class EpisodeRunner {
           y: s.y,
           heading: s.heading,
           inputs: Array.from(this.inputs),
+          ...(rawInputs ? { rawInputs } : {}),
           hidden: this.controller.hidden()
             ? Array.from(this.controller.hidden()!)
             : null,
@@ -246,6 +260,9 @@ export class EpisodeRunner {
         this.definition.controller.kind === "neural"
           ? parameterHash(this.definition.controller.parameters)
           : hash(this.definition.controller),
+      ...(this.definition.intervention
+        ? { intervention: this.definition.intervention }
+        : {}),
     };
     return {
       spec: { ...body, hash: hash(body) },
@@ -263,3 +280,18 @@ export const createEpisode = (def: EpisodeDefinition) => new EpisodeRunner(def);
 
 export const restoreEpisode = (checkpoint: EpisodeCheckpoint) =>
   EpisodeRunner.restore(checkpoint);
+
+export function validateSensorMask(mask: SensorMask, maxTicks: number) {
+  if (
+    mask.kind !== "sensorMask" ||
+    mask.version !== 1 ||
+    !Number.isInteger(mask.channel) ||
+    mask.channel < 0 ||
+    mask.channel >= 20 ||
+    !Number.isInteger(mask.startTick) ||
+    mask.startTick < 0 ||
+    mask.startTick >= maxTicks ||
+    mask.startTick % 3 !== 0
+  )
+    throw new Error("Invalid sensor mask");
+}

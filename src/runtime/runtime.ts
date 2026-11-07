@@ -1,4 +1,5 @@
 import { ExperimentRunner } from "../core/experiment";
+import { ComparisonRunner } from "../core/comparison";
 import {
   createEpisode,
   restoreEpisode,
@@ -46,6 +47,8 @@ export class SimulationRuntime {
   private frameId = 0;
   private inFlight: number | null = null;
   private checkpointRequest: string | null = null;
+  private comparison: { requestId: string; runner: ComparisonRunner } | null =
+    null;
   constructor(
     readonly sessionId: string,
     private emit: (event: RuntimeEvent) => void,
@@ -112,6 +115,12 @@ export class SimulationRuntime {
       this.playback.seek = null;
     }
   }
+  private cancelComparison(message: string) {
+    if (this.comparison) {
+      this.error(this.comparison.requestId, "command", "CANCELLED", message);
+      this.comparison = null;
+    }
+  }
   private requirePlayback(id: string): Playback {
     if (!this.playback || this.playback.id !== id)
       throw new Error("Stale playback");
@@ -174,6 +183,7 @@ export class SimulationRuntime {
         const runner = new ExperimentRunner(c.checkpoint);
         this.cancelCheckpoint("Experiment replaced");
         this.cancelSeek("Experiment replaced");
+        this.cancelComparison("Experiment replaced");
         this.runner = runner;
         this.experimentId = c.checkpoint.definition.id;
         this.epoch++;
@@ -244,6 +254,21 @@ export class SimulationRuntime {
           throw new Error("A checkpoint request is already pending");
         this.checkpointRequest = requestId;
         return;
+      case "comparePlayback": {
+        const p = this.requirePlayback(c.playbackId);
+        if (p.playing || p.seek)
+          throw new Error("Pause playback before comparing");
+        const runner = new ComparisonRunner(p.runner.checkpoint(), c.channel);
+        this.cancelComparison("Comparison replaced");
+        this.comparison = { requestId, runner };
+        return;
+      }
+      case "replayComparison": {
+        const runner = new ComparisonRunner(c.source, c.channel);
+        this.cancelComparison("Comparison replaced");
+        this.comparison = { requestId, runner };
+        return;
+      }
       case "openPlayback": {
         const definition = { ...c.definition, trace: true },
           runner = createEpisode(definition);
@@ -315,6 +340,8 @@ export class SimulationRuntime {
         }
         return;
       case "cancelRequest":
+        if (this.comparison?.requestId === c.targetRequestId)
+          this.cancelComparison("Request cancelled");
         if (this.checkpointRequest === c.targetRequestId)
           this.cancelCheckpoint("Request cancelled");
         if (this.playback?.seek?.requestId === c.targetRequestId)
@@ -322,6 +349,7 @@ export class SimulationRuntime {
         this.publishStatus();
         return;
       case "dispose":
+        this.cancelComparison("Runtime disposed");
         this.cancelCheckpoint("Runtime disposed");
         this.cancelSeek("Runtime disposed");
         this.runRequested = false;
@@ -386,7 +414,8 @@ export class SimulationRuntime {
           this.runner.phase !== "awaitingCommit" &&
           this.runner.phase !== "error") ||
         this.playback?.playing ||
-        this.playback?.seek
+        this.playback?.seek ||
+        this.comparison
       )
     );
   }
@@ -403,6 +432,25 @@ export class SimulationRuntime {
     if (this.disposed) return;
     const deadline = this.now() + 8,
       p = this.playback;
+    // A bounded share of each slice leaves training and playback responsive.
+    if (this.comparison) {
+      const job = this.comparison;
+      try {
+        const compareDeadline = this.now() + 2;
+        while (this.now() < compareDeadline && !job.runner.done)
+          job.runner.advance(16);
+        if (job.runner.done) {
+          this.comparison = null;
+          this.reply(job.requestId, {
+            type: "comparison",
+            comparison: job.runner.result()!,
+          });
+        }
+      } catch (error) {
+        this.comparison = null;
+        this.error(job.requestId, "command", "COMPARISON_FAILED", error);
+      }
+    }
     if (p) {
       try {
         if (p.seek) {

@@ -65,7 +65,14 @@ export interface EvaluationSpec {
   scenarioHash: string;
   controllerId: string;
   controllerVersion: string;
+  intervention?: SensorMask;
   hash: string;
+}
+export interface SensorMask {
+  kind: "sensorMask";
+  version: 1;
+  channel: number;
+  startTick: number;
 }
 export interface TrialResult {
   spec: EvaluationSpec;

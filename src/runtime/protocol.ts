@@ -11,6 +11,8 @@ import type {
 } from "../core/episode";
 import type { TrialResult } from "../core/model";
 import type { GenerationCommit, ExperimentPhase } from "../core/experiment";
+import { restoreEpisode, type EpisodeCheckpoint } from "../core/episode";
+import type { SensorComparison } from "../core/comparison";
 
 export const PROTOCOL_VERSION = 1;
 const id = z.string().min(1).max(256);
@@ -55,6 +57,27 @@ const episode = z.object({
   trace: z.boolean().optional(),
 });
 const commands = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("comparePlayback"),
+    ...scope,
+    playbackId: id,
+    channel: z.number().int().min(0).max(19),
+  }),
+  z.object({
+    type: z.literal("replayComparison"),
+    ...scope,
+    channel: z.number().int().min(0).max(19),
+    source: z.custom<EpisodeCheckpoint>((v) => {
+      try {
+        const c = v as EpisodeCheckpoint;
+        if (c.definition.scenario.config.maxTicks > 5400) return false;
+        restoreEpisode(c);
+        return true;
+      } catch {
+        return false;
+      }
+    }),
+  }),
   z.object({ type: z.literal("initialize"), checkpoint }),
   z.object({
     type: z.literal("startTraining"),
@@ -136,6 +159,7 @@ export type ReplyData =
   | { type: "status"; status: RuntimeStatus }
   | { type: "checkpoint"; checkpoint: ExperimentCheckpoint }
   | { type: "playback"; snapshot: PlaybackSnapshot }
+  | { type: "comparison"; comparison: SensorComparison }
   | { type: "disposed" };
 interface EventBase {
   protocolVersion: 1;
