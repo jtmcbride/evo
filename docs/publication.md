@@ -24,6 +24,6 @@ npm run test:browser
 VITE_BASE_PATH=/evo/ npm run build
 ```
 
-The long scientific benchmark is deliberately separate from deployment checks. A short pilot measures early learning and local runtime cost; it does not establish held-out generalization or browser performance. M10's frozen benchmark, representative browser-generated examples, and Firefox/WebKit release acceptance remain separate work.
+The long scientific benchmark is deliberately separate from deployment checks. The [completed frozen benchmark](benchmarks/benchmark-open-v1.md) and [release evidence](release.md) record all 20 × 200 runs, separate held-out evaluation, representative Chromium-authored example archives, Firefox/WebKit acceptance, and measured runtime limits. The manual **Release browser matrix** workflow runs all three browser projects. Firefox's functional project excludes the documented axe scanner crash; Chromium/WebKit retain full automated accessibility scans.
 
 The [initial publication pilot](benchmarks/m10-short-pilot.md) records the bounded three-run check performed after the first public push.

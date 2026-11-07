@@ -1,6 +1,6 @@
 **Evolution Lab implementation plan**
 
-Build a browser application that evolves small neural controllers in independent foraging trials, explains their behavior through replay and inspection, and preserves enough provenance to repeat experiments. M0–M6 are implemented and committed; see [milestone progress](progress.md) for verification. Later milestones remain proposed implementation work. Numerical values below are starting configurations to validate through benchmarks.
+Build a browser application that evolves small neural controllers in independent foraging trials, explains their behavior through replay and inspection, and preserves enough provenance to repeat experiments. M0–M10 are implemented; see [milestone progress](progress.md) and [release evidence](release.md) for verification and measured limits. This document preserves the design and original performance aspirations; release measurements take precedence over provisional targets.
 
 The first playable release runs evolution, displays a selected trial, supports sensor interventions, and saves and restores generation checkpoints. The subsequent complete laboratory release adds lineage comparison and controlled experiment branches. Both use the same numerical engine.
 
@@ -389,7 +389,7 @@ Each milestone should be reviewable independently with its tests and an executab
 
 **15. Define the development commands and delivery workflow.**
 
-The command surfaces below describe the complete roadmap. All command surfaces below are implemented through M6; `test:browser` verifies the worker and workbench in Chromium:
+The command surfaces below are implemented; `test:browser` verifies the worker and workbench in Chromium and `test:release` adds Firefox/WebKit functional release acceptance:
 
 ```text
 npm run dev
@@ -397,11 +397,12 @@ npm run typecheck
 npm run lint
 npm run test:engine
 npm run test:browser
+npm run test:release
 npm run build
 npm run preview
 npm run evaluate -- --preset open-v1 --seed 42 --controller scripted-v1
 npm run evolve -- --preset open-v1 --seed 42 --generations 50 --out artifacts/run-42
-npm run benchmark -- --suite benchmark-v1 --out artifacts/benchmark-v1
+npm run benchmark:release -- --run 0 --out artifacts/benchmark-open-v1-run-0
 ```
 
 The CLI accepts the same serialized definitions and checkpoints as the browser. It writes a manifest, raw trial/generation records, compact summaries, and a final checkpoint. Keep generated runs out of normal source control except curated small fixtures and release examples.

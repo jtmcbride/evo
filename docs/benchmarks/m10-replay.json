@@ -1,0 +1,160 @@
+{
+  "run": 7,
+  "sourceCommit": "1fb5f40ddc8c6d59b3936aa50ca1223623a6a0b6",
+  "browser": "158.0.8127.18",
+  "examples": [
+    {
+      "which": "initial",
+      "scenarioHash": "1117b93f041ad0deaaccf2f24b7e7866d11f3af8fbaa2b67b87076579db39b9d",
+      "parameterHash": "f51bb02823832ac7ab900ed579599144c56375dc07824edc92daa7dafe636517",
+      "localNode": {
+        "node": "v24.18.0",
+        "platform": "darwin",
+        "arch": "arm64"
+      },
+      "browserRuntime": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.18 Safari/537.36",
+        "platform": "MacIntel"
+      },
+      "exactEvaluation": false,
+      "nodeEvaluationHash": "54ad85d6528caaefa11aeee06eb7cf81bdf76dae07457b97b4fe4fce79e7c324",
+      "browserEvaluationHash": "1de5da4736487f26b83784cdd4e67646fd1aeea5f3812b16b99f82cfc9ba4b39",
+      "originalHostedNodeResult": {
+        "spec": {
+          "engineVersion": "evo-engine-1",
+          "objectiveVersion": "food-v1",
+          "scenarioHash": "1117b93f041ad0deaaccf2f24b7e7866d11f3af8fbaa2b67b87076579db39b9d",
+          "controllerId": "experiment-benchmark-open-v1:run-7:g0:s7",
+          "controllerVersion": "f51bb02823832ac7ab900ed579599144c56375dc07824edc92daa7dafe636517",
+          "hash": "05ff979f0554b3e14c125f7f5ecc8cbe2950b160c4a8bfffcf29713c0b461580"
+        },
+        "foodCollected": 8,
+        "distanceTravelled": 1250.611728931607,
+        "contactTicks": 20,
+        "survivalTicks": 1800,
+        "remainingEnergy": 91.37753719644876,
+        "terminalReason": "timeLimit",
+        "score": 8
+      },
+      "localNodeResult": {
+        "spec": {
+          "engineVersion": "evo-engine-1",
+          "objectiveVersion": "food-v1",
+          "scenarioHash": "1117b93f041ad0deaaccf2f24b7e7866d11f3af8fbaa2b67b87076579db39b9d",
+          "controllerId": "experiment-benchmark-open-v1:run-7:g0:s7",
+          "controllerVersion": "f51bb02823832ac7ab900ed579599144c56375dc07824edc92daa7dafe636517",
+          "hash": "05ff979f0554b3e14c125f7f5ecc8cbe2950b160c4a8bfffcf29713c0b461580"
+        },
+        "foodCollected": 8,
+        "distanceTravelled": 1250.611728931607,
+        "contactTicks": 20,
+        "survivalTicks": 1800,
+        "remainingEnergy": 91.37753719644876,
+        "terminalReason": "timeLimit",
+        "score": 8
+      },
+      "browserResult": {
+        "spec": {
+          "engineVersion": "evo-engine-1",
+          "objectiveVersion": "food-v1",
+          "scenarioHash": "1117b93f041ad0deaaccf2f24b7e7866d11f3af8fbaa2b67b87076579db39b9d",
+          "controllerId": "experiment-benchmark-open-v1:run-7:g0:s7",
+          "controllerVersion": "f51bb02823832ac7ab900ed579599144c56375dc07824edc92daa7dafe636517",
+          "hash": "05ff979f0554b3e14c125f7f5ecc8cbe2950b160c4a8bfffcf29713c0b461580"
+        },
+        "foodCollected": 8,
+        "distanceTravelled": 1250.6117289316142,
+        "contactTicks": 20,
+        "survivalTicks": 1800,
+        "remainingEnergy": 91.37753719644876,
+        "terminalReason": "timeLimit",
+        "score": 8
+      },
+      "pathSamples": {
+        "node": 600,
+        "browser": 600
+      },
+      "maxCoordinateDifference": 1.6711965145077556e-11,
+      "maxFirstInputDifference": 0,
+      "maxFirstHiddenDifference": 5.551115123125783e-17,
+      "maxFirstOutputDifference": 2.220446049250313e-16
+    },
+    {
+      "which": "final",
+      "scenarioHash": "1117b93f041ad0deaaccf2f24b7e7866d11f3af8fbaa2b67b87076579db39b9d",
+      "parameterHash": "6524bed6692680d66d98694da2a54be5f5d6c6b3643e1845343c95df18684374",
+      "localNode": {
+        "node": "v24.18.0",
+        "platform": "darwin",
+        "arch": "arm64"
+      },
+      "browserRuntime": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.18 Safari/537.36",
+        "platform": "MacIntel"
+      },
+      "exactEvaluation": false,
+      "nodeEvaluationHash": "b8568f37c783283c7b3b2fa333659c39dce608e35fefc67cff0d224ea9f39bb6",
+      "browserEvaluationHash": "f0e68c044e827b3dc267b9245cb418c82fb603007f944bae01163b93f717c757",
+      "originalHostedNodeResult": {
+        "spec": {
+          "engineVersion": "evo-engine-1",
+          "objectiveVersion": "food-v1",
+          "scenarioHash": "1117b93f041ad0deaaccf2f24b7e7866d11f3af8fbaa2b67b87076579db39b9d",
+          "controllerId": "experiment-benchmark-open-v1:run-7:g199:s44",
+          "controllerVersion": "6524bed6692680d66d98694da2a54be5f5d6c6b3643e1845343c95df18684374",
+          "hash": "f72bb3710bf50d6b57481cfdb85181b1d6bd9eb6e14fd6cdd5c58cfa64689193"
+        },
+        "foodCollected": 31,
+        "distanceTravelled": 3639.117747966356,
+        "contactTicks": 41,
+        "survivalTicks": 1800,
+        "remainingEnergy": 75.4853777169174,
+        "terminalReason": "timeLimit",
+        "score": 31
+      },
+      "localNodeResult": {
+        "spec": {
+          "engineVersion": "evo-engine-1",
+          "objectiveVersion": "food-v1",
+          "scenarioHash": "1117b93f041ad0deaaccf2f24b7e7866d11f3af8fbaa2b67b87076579db39b9d",
+          "controllerId": "experiment-benchmark-open-v1:run-7:g199:s44",
+          "controllerVersion": "6524bed6692680d66d98694da2a54be5f5d6c6b3643e1845343c95df18684374",
+          "hash": "f72bb3710bf50d6b57481cfdb85181b1d6bd9eb6e14fd6cdd5c58cfa64689193"
+        },
+        "foodCollected": 31,
+        "distanceTravelled": 3639.117747966356,
+        "contactTicks": 41,
+        "survivalTicks": 1800,
+        "remainingEnergy": 75.4853777169174,
+        "terminalReason": "timeLimit",
+        "score": 31
+      },
+      "browserResult": {
+        "spec": {
+          "engineVersion": "evo-engine-1",
+          "objectiveVersion": "food-v1",
+          "scenarioHash": "1117b93f041ad0deaaccf2f24b7e7866d11f3af8fbaa2b67b87076579db39b9d",
+          "controllerId": "experiment-benchmark-open-v1:run-7:g199:s44",
+          "controllerVersion": "6524bed6692680d66d98694da2a54be5f5d6c6b3643e1845343c95df18684374",
+          "hash": "f72bb3710bf50d6b57481cfdb85181b1d6bd9eb6e14fd6cdd5c58cfa64689193"
+        },
+        "foodCollected": 31,
+        "distanceTravelled": 3639.142829031366,
+        "contactTicks": 41,
+        "survivalTicks": 1800,
+        "remainingEnergy": 75.4850571502997,
+        "terminalReason": "timeLimit",
+        "score": 31
+      },
+      "pathSamples": {
+        "node": 600,
+        "browser": 600
+      },
+      "maxCoordinateDifference": 0.0474950695059988,
+      "maxFirstInputDifference": 0,
+      "maxFirstHiddenDifference": 1.1102230246251565e-16,
+      "maxFirstOutputDifference": 1.1102230246251565e-16
+    }
+  ],
+  "limits": "Two fixed validation-map replays, not proof of cross-runtime identity for other seeds, hardware or versions. Archives preserve Chromium-generated results and Node training provenance. Exact equality is measured, never assumed."
+}

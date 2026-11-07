@@ -2,7 +2,9 @@
 
 [Open the public workbench](https://jmcbride.site/evo/) · [Publication and local verification](docs/publication.md)
 
-A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M9 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser workbench includes seeded setup, training controls, Canvas playback, an inspectable neural graph, sensor readings, measurements, and training/validation history. Historical champions replay their original trials. Matched sensor interventions compare an unchanged control episode against a one-input mask, with saved outcomes and portable replay.
+A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M10 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser workbench includes seeded setup, training controls, Canvas playback, an inspectable neural graph, sensor readings, measurements, and training/validation history. Historical champions replay their original trials. Matched sensor interventions compare an unchanged control episode against a one-input mask, with saved outcomes and portable replay.
+
+Open **Previously generated examples** to inspect the initial/final controllers from the benchmark run nearest median final validation performance. Examples load as separate local saves and retain training/replay provenance. The [frozen 20-run × 200-generation benchmark](docs/benchmarks/benchmark-open-v1.md) improved held-out mean food collection from 7.90 to 29.40; all final champions exceeded the three baselines on the matched open-arena suites. [Release evidence](docs/release.md) records the full results, runtime limits, representative-example rule, and browser acceptance.
 
 Use Node 24.18.0 and the committed npm lockfile:
 
@@ -53,6 +55,8 @@ Install the pinned test browser and verify the production worker under a reposit
 npx playwright install chromium
 npm run test:browser
 ```
+
+For release acceptance, install `chromium firefox webkit` and run `npm run test:release`. Chromium/WebKit include desktop/mobile accessibility scans; Firefox runs the functional suite with a documented axe scanner crash limitation. The long frozen benchmark is a separate manual workflow, or `npm run benchmark:release -- --run N --out NEW_DIRECTORY` for each run index 0–19. It never runs on ordinary UI pushes.
 
 The test command builds with `/evo/` as the asset base, starts a local preview server, and runs Chromium worker and workbench acceptance, including automated accessibility checks. `npm run test:engine` includes pure-engine and runtime/client unit tests. The worker uses approximately 8 ms scheduling slices, exact fixed ticks, a real task yield, and one outstanding render snapshot. `SimulationClient` owns startup, pending requests, stale-message filtering, failure notifications, and disposal. See [the worker contract and acceptance evidence](docs/worker-runtime.md).
 

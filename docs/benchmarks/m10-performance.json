@@ -1,0 +1,174 @@
+{
+  "sourceCommit": "55d19b43f900f129ba5f2ce2c3c6edd23064064e",
+  "measuredAt": "2026-11-07T05:09:33.720Z",
+  "runtimeSourceDirty": false,
+  "buildAssetSha256": {
+    "dist/index.html": "83a5dcad8b4aed3305a8d6c09165c21011aab2677f1ccf519b6fa1a825c169e5",
+    "dist/runtime.html": "48a0548500ae898cfae7d51af691c0ef92f8ecc579f8da6b8b82880c188d1211",
+    "dist/assets/archive-client-C7xJPGJs.js": "3e8624f5d5ca8a5f5a8f65204c4937cd89d9c33ac9ff65cc2f6089ebe89badf3",
+    "dist/assets/archive.worker-BYNCq6i6.js": "0be2147be078a2e79907b9a64f86ceed17c9f4a9da69c0478610a322588e331a",
+    "dist/assets/experiment-CcsA8nnh.js": "cfe13b623c50aac09301fe07ed752dc419dbcc25ea756fc0af4339f0dbff854c",
+    "dist/assets/main-BXycrSe3.js": "00185671a699cdf7d9559ed9b3764635bdf86b9e823222c29f5deda410642019",
+    "dist/assets/main-CD9eBnEO.css": "b929c64fc817c43dc38d559980a1af6ab63302fcbe1653793ce25a6ffb08b7a3",
+    "dist/assets/runtime-i-GizoLu.js": "1cabe56e9df23404c49bf448affbfcbabaac8aa3f72bc272a9e8c3f22e4ba287",
+    "dist/assets/simulation.worker-B70y-KPB.js": "a54ace7ba6bab695b1d6ed07086cb397d38daa5ae5757cf4dddae17696230b9e"
+  },
+  "host": {
+    "cpu": "Apple M1 Pro",
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.18.0"
+  },
+  "fixture": {
+    "seed": "release-performance-v1",
+    "world": {
+      "width": 800,
+      "height": 600,
+      "foodCount": 48,
+      "obstacleCount": 5,
+      "bodyRadius": 8,
+      "foodRadius": 4,
+      "sensorRange": 140,
+      "vMax": 90,
+      "omegaMax": 3.141592653589793,
+      "maxTicks": 1800,
+      "maxEnergy": 100,
+      "foodEnergy": 20
+    },
+    "controllerHash": "d670790565c058f52797ec9b17e24e47dcef9fb4f8a2ec2a255f696d2b1501dd"
+  },
+  "microMilliseconds": {
+    "scenario": {
+      "samples": 30,
+      "median": 0.12997394999999867,
+      "p95": 0.1755728049999999,
+      "min": 0.11214375000000132,
+      "max": 0.2568167000000017
+    },
+    "sensing": {
+      "samples": 30,
+      "median": 0.004043604500000015,
+      "p95": 0.004240912500000059,
+      "min": 0.0038220830000000204,
+      "max": 0.0051101249999999255
+    },
+    "collisionMove": {
+      "samples": 30,
+      "median": 0.001245104499999968,
+      "p95": 0.00230420785,
+      "min": 0.00113154099999997,
+      "max": 0.002373291999999992
+    },
+    "inference": {
+      "samples": 30,
+      "median": 0.0003341664999999807,
+      "p95": 0.0004527311000000736,
+      "min": 0.00032825000000002546,
+      "max": 0.000806208999999967
+    },
+    "episode": {
+      "samples": 30,
+      "median": 9.08104149999997,
+      "p95": 10.219677325000015,
+      "min": 8.657187499999964,
+      "max": 10.391124999999988
+    }
+  },
+  "browsers": [
+    {
+      "name": "chromium",
+      "version": "158.0.8127.18",
+      "runtime": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.18 Safari/537.36",
+        "platform": "MacIntel"
+      },
+      "generationMilliseconds": 3843.458833,
+      "pauseMilliseconds": {
+        "samples": 20,
+        "median": 4.649999998509884,
+        "p95": 6.634999994188548,
+        "min": 3.8999999910593033,
+        "max": 7.299999997019768
+      },
+      "arenaPaintIntervalMilliseconds": {
+        "samples": 85,
+        "median": 49.8999999910593,
+        "p95": 67.74000000059604,
+        "min": 1.6000000089406967,
+        "max": 187.29999999701977
+      },
+      "arenaPaintCount": 86,
+      "indexedDbHeadTransactionMilliseconds": {
+        "samples": 2,
+        "median": 142.44999999552965,
+        "p95": 258.23499999418857,
+        "min": 13.799999997019768,
+        "max": 271.09999999403954
+      }
+    },
+    {
+      "name": "firefox",
+      "version": "159.0",
+      "runtime": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:159.0) Gecko/20100101 Firefox/159.0",
+        "platform": "MacIntel"
+      },
+      "generationMilliseconds": 4917.199166,
+      "pauseMilliseconds": {
+        "samples": 20,
+        "median": 3,
+        "p95": 4.050000000000001,
+        "min": 2,
+        "max": 5
+      },
+      "arenaPaintIntervalMilliseconds": {
+        "samples": 105,
+        "median": 57,
+        "p95": 64,
+        "min": 3,
+        "max": 247
+      },
+      "arenaPaintCount": 106,
+      "indexedDbHeadTransactionMilliseconds": {
+        "samples": 2,
+        "median": 218.5,
+        "p95": 413.34999999999997,
+        "min": 2,
+        "max": 435
+      }
+    },
+    {
+      "name": "webkit",
+      "version": "27.2",
+      "runtime": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "platform": "MacIntel"
+      },
+      "generationMilliseconds": 3898.6712499999994,
+      "pauseMilliseconds": {
+        "samples": 20,
+        "median": 4,
+        "p95": 7,
+        "min": 1,
+        "max": 7
+      },
+      "arenaPaintIntervalMilliseconds": {
+        "samples": 90,
+        "median": 43,
+        "p95": 67,
+        "min": 12,
+        "max": 156
+      },
+      "arenaPaintCount": 91,
+      "indexedDbHeadTransactionMilliseconds": {
+        "samples": 2,
+        "median": 185,
+        "p95": 349.7,
+        "min": 2,
+        "max": 368
+      }
+    }
+  ],
+  "sink": 728047.3024149846,
+  "limits": "Headless focused desktop smoke measurements, not physical display FPS or a memory-leak proof. Microbenchmarks use the obstacle fixture; default-generation and UI checks use open-world defaults. Pause samples use the diagnostic harness. IndexedDB transactions cover numerical heads, not complete export cost. Core times are per call after one warmup batch, with 30 batches. No timing threshold is a correctness gate."
+}

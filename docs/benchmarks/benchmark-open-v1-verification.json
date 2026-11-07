@@ -1,0 +1,16 @@
+{
+  "protocolHash": "9a8f0f3a291d7bb6a3f984a7a0d35abf4f150e2869234fd359444a5326ea1ba4",
+  "sourceCommit": "1fb5f40ddc8c6d59b3936aa50ca1223623a6a0b6",
+  "verifiedRuns": 20,
+  "verifiedGenerations": 4000,
+  "verifiedTrainingTrials": 1536000,
+  "checks": [
+    "fresh frozen definitions",
+    "rotating map seeds",
+    "raw memberships and integer trial totals",
+    "training-selected champions",
+    "scheduled validation maps and scores",
+    "final checkpoint/commit identity",
+    "matched validation/held-out endpoint maps"
+  ]
+}
