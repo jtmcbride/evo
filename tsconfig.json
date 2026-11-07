@@ -6,9 +6,16 @@
     "strict": true,
     "jsx": "react-jsx",
     "lib": ["ES2023", "DOM"],
-    "types": ["node"],
+    "types": ["node", "vite/client"],
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "scripts", "tests", "vitest.config.ts"]
+  "include": [
+    "src",
+    "scripts",
+    "tests",
+    "vitest.config.ts",
+    "vite.config.ts",
+    "playwright.config.ts"
+  ]
 }

@@ -37,6 +37,7 @@ export class SimulationRuntime {
   private runRequested = false;
   private target: number | null = null;
   private publishedCommit: string | null = null;
+  private acknowledgedCommit: string | null = null;
   private playback: Playback | null = null;
   private disposed = false;
   private lastStatus = -Infinity;
@@ -72,7 +73,9 @@ export class SimulationRuntime {
       completedTrials: progress?.completedTrials ?? 0,
       totalTrials: progress?.totalTrials ?? 0,
       activeTick: progress?.activeTick ?? null,
-      training: this.runRequested && this.runner?.phase !== "awaitingCommit",
+      training:
+        (this.runRequested || !!this.checkpointRequest) &&
+        this.runner?.phase !== "awaitingCommit",
       targetGeneration: this.target,
       playbackId: this.playback?.id ?? null,
       playing: this.playback?.playing ?? false,
@@ -177,6 +180,7 @@ export class SimulationRuntime {
         this.runRequested = false;
         this.target = null;
         this.publishedCommit = null;
+        this.acknowledgedCommit = null;
         this.playback = null;
         this.inFlight = null;
         break;
@@ -197,10 +201,12 @@ export class SimulationRuntime {
         this.cancelCheckpoint("Checkpoint completion cancelled by pause");
         break;
       case "commitSucceeded": {
+        if (c.commitId === this.acknowledgedCommit) break;
         const commit = this.runner!.pendingCommit();
         if (!commit || commit.id !== c.commitId)
           throw new Error("Stale commit");
         this.runner!.acknowledge(c.commitId);
+        this.acknowledgedCommit = c.commitId;
         this.publishedCommit = null;
         if (this.checkpointRequest) {
           this.reply(this.checkpointRequest, {

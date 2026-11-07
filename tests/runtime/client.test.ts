@@ -78,3 +78,36 @@ test("transport failure rejects queued requests and startup failure is bounded",
   await rejected;
   vi.useRealTimers();
 });
+
+test("request timeout sends cancellation and a fatal worker error reaches observers", async () => {
+  vi.useFakeTimers();
+  try {
+    const w = new Transport(),
+      c = new SimulationClient(w as unknown as Worker, 20),
+      events: RuntimeEvent[] = [];
+    c.subscribe((e) => events.push(e));
+    w.event({ type: "ready" });
+    const waiting = c.request({ type: "inspectPlayback", playbackId: "p" }),
+      failure = expect(waiting).rejects.toThrow("request timed out");
+    await vi.advanceTimersByTimeAsync(30);
+    await failure;
+    expect(
+      w.sent.some(
+        (v) =>
+          (v as { command: { type: string } }).command.type === "cancelRequest",
+      ),
+    ).toBe(true);
+    w.emit("error", { message: "fatal worker error" });
+    expect(
+      events.some(
+        (e) =>
+          e.type === "error" &&
+          e.scope === "worker" &&
+          e.message === "fatal worker error",
+      ),
+    ).toBe(true);
+    expect(w.terminated).toBe(true);
+  } finally {
+    vi.useRealTimers();
+  }
+});

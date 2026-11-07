@@ -154,7 +154,7 @@ export type RuntimeEvent = EventBase &
     | {
         type: "error";
         requestId: string | null;
-        scope: "command" | "training" | "playback";
+        scope: "command" | "training" | "playback" | "worker";
         code: string;
         message: string;
       }

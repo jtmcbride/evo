@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Evolution Lab runtime diagnostics</title></head>
+<body>
+<main style="max-width:64rem;margin:2rem auto;font-family:system-ui;padding:0 1rem">
+<h1>Runtime diagnostics</h1>
+<p>Train in a worker and inspect an independent trial. Saves are held in memory for this session; the latest five generation records are retained. Reloading starts a new session.</p>
+<form id="setup"><label>Population <input id="population" type="number" min="16" max="512" value="128"></label> <button>Initialize experiment</button></form>
+<p><button id="train">Train one generation</button> <button id="pause">Pause training</button> <button id="checkpoint">Inspect saved population</button></p>
+<p><button id="open">Open selected trial</button> <button id="play">Play trial</button> <button id="stop">Pause trial</button> <button id="step">Step to decision</button> <button id="inspect">Inspect trial</button></p>
+<form id="seek-form"><label>Seek tick <input id="seek" type="number" min="0" max="1800" value="120"></label> <button>Seek</button></form>
+<p><button id="dispose">Dispose worker</button> <span id="heartbeat" aria-label="Page heartbeat"></span></p>
+<h2>Status</h2><pre id="status" aria-live="polite">Starting worker…</pre>
+<h2>Selected trial</h2><pre id="playback">No trial selected.</pre>
+<h2>Messages</h2><pre id="messages" role="log"></pre>
+</main><script type="module" src="/src/runtime/harness.ts"></script>
+</body></html>

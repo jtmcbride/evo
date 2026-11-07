@@ -1,6 +1,6 @@
 **Evolution Lab**
 
-A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M3 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The Vite application currently provides a minimal entry screen; worker execution and the interactive workbench are M4–M5.
+A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M4 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser now runs training and independent playback through a module worker, with a runtime diagnostics page. The full visual workbench remains M5.
 
 Use Node 24.18.0 and the committed npm lockfile:
 
@@ -42,3 +42,15 @@ npm run benchmark -- --runs 5 --generations 50 --out artifacts/pilot
 The pilot reports fixed-validation performance, baselines, initial selection signal, and generation timings. It is separate from correctness tests and does not establish held-out generalization. Generated runs are ignored by Git.
 
 [Implementation plan](docs/implementation-plan.md) and [milestone progress](docs/progress.md) describe contracts, acceptance criteria, and remaining work.
+
+
+Run browser diagnostics with `npm run dev`, then open the “Open runtime diagnostics” link. Initialize an experiment, start training, and open an independent selected trial. Training and playback have separate pause controls. Generation acknowledgments on this page retain the latest five commits in memory; durable IndexedDB saving remains M6.
+
+Install the pinned test browser and verify the production worker under a repository subpath:
+
+```sh
+npx playwright install chromium
+npm run test:browser
+```
+
+The test command builds with `/evo/` as the asset base, starts a local preview server, and runs Chromium acceptance. `npm run test:engine` includes pure-engine and runtime/client unit tests. The worker uses approximately 8 ms scheduling slices, exact fixed ticks, a real task yield, and one outstanding render snapshot. `SimulationClient` owns startup, pending requests, stale-message filtering, failure notifications, and disposal. See [the worker contract and acceptance evidence](docs/worker-runtime.md).

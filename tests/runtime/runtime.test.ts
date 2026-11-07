@@ -106,6 +106,14 @@ test("training matches core with independent inspection, stepping and seeking", 
     ...h.scope,
     commitId: commits(h.events)[0].commit.id,
   });
+  const duplicate = h.send({
+    type: "commitSucceeded",
+    ...h.scope,
+    commitId: commits(h.events)[0].commit.id,
+  });
+  expect(
+    h.events.some((e) => e.type === "reply" && e.requestId === duplicate),
+  ).toBe(true);
   expect(h.runtime.status().generation).toBe(1);
   expect(h.runtime.needsWork).toBe(false);
 });
@@ -209,4 +217,37 @@ test("replacement, stale epochs, cancellation and dispose settle deferred reques
   h.send({ type: "dispose" });
   expect(h.runtime.status().disposed).toBe(true);
   expect(h.runtime.needsWork).toBe(false);
+});
+
+test("training errors stop selection without becoming zero-score evaluations", () => {
+  const h = setup(),
+    bad = structuredClone(h.checkpoint);
+  Object.assign(bad.definition.world, {
+    width: 100,
+    height: 100,
+    obstacleCount: 5,
+  });
+  h.send({ type: "initialize", checkpoint: bad });
+  h.send({ type: "openPlayback", playbackId: "p", definition: h.playback });
+  h.send({
+    type: "setPlaybackState",
+    playbackId: "p",
+    playing: true,
+    speed: 1,
+  });
+  h.send({
+    type: "startTraining",
+    experimentId: bad.definition.id,
+    epoch: 2,
+    generations: 1,
+  });
+  h.runtime.pump();
+  expect(h.runtime.status().phase).toBe("error");
+  expect(commits(h.events)).toHaveLength(0);
+  expect(
+    h.events.some((e) => e.type === "error" && e.scope === "training"),
+  ).toBe(true);
+  expect(h.runtime.status().playing).toBe(true);
+  h.send({ type: "initialize", checkpoint: h.checkpoint });
+  expect(h.runtime.status().phase).toBe("readyToEvaluate");
 });

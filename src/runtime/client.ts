@@ -190,7 +190,7 @@ export class SimulationClient {
     this.fail(new Error(event.message || "Worker execution failed"));
   private onMessageError = () =>
     this.fail(new Error("Worker message could not be decoded"));
-  private fail(error: Error) {
+  private fail(error: Error, report = true) {
     if (this.closed) return;
     this.closed = true;
     clearTimeout(this.bootTimer);
@@ -200,6 +200,19 @@ export class SimulationClient {
       pending.reject(error);
     }
     this.pending.clear();
+    if (report)
+      this.notify({
+        protocolVersion: PROTOCOL_VERSION,
+        sessionId: this.session ?? "uninitialized",
+        sequence: this.sequence + 1,
+        experimentId: this.latestStatus?.experimentId ?? null,
+        epoch: this.latestStatus?.epoch ?? 0,
+        type: "error",
+        scope: "worker",
+        requestId: null,
+        code: "WORKER_FAILED",
+        message: error.message,
+      });
     this.listeners.clear();
     this.worker.removeEventListener("message", this.onMessage);
     this.worker.removeEventListener("error", this.onError);
@@ -207,6 +220,6 @@ export class SimulationClient {
     this.worker.terminate();
   }
   close() {
-    this.fail(new Error("Worker client closed"));
+    this.fail(new Error("Worker client closed"), false);
   }
 }
