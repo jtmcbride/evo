@@ -17,7 +17,8 @@
     "evolve": "node --import tsx scripts/evolve.ts",
     "benchmark": "node --import tsx scripts/benchmark.ts",
     "benchmark:release": "node --import tsx scripts/benchmark-release.ts",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test --project=chromium",
+    "test:release": "playwright test"
   },
   "dependencies": {
     "@noble/hashes": "2.4.0",
