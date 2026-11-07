@@ -13,6 +13,9 @@ import type { TrialResult } from "../core/model";
 import type { GenerationCommit, ExperimentPhase } from "../core/experiment";
 import { restoreEpisode, type EpisodeCheckpoint } from "../core/episode";
 import type { SensorComparison } from "../core/comparison";
+import type { ControllerComparison } from "../core/comparison/controllers";
+import { retainGenome } from "../core/lineage";
+import type { Genome } from "../core/model";
 
 export const PROTOCOL_VERSION = 1;
 const id = z.string().min(1).max(256);
@@ -57,6 +60,27 @@ const episode = z.object({
   trace: z.boolean().optional(),
 });
 const commands = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("compareControllers"),
+    ...scope,
+    parent: z.custom<Genome>((v) => {
+      try {
+        retainGenome(v as Genome);
+        return true;
+      } catch {
+        return false;
+      }
+    }),
+    child: z.custom<Genome>((v) => {
+      try {
+        retainGenome(v as Genome);
+        return true;
+      } catch {
+        return false;
+      }
+    }),
+    scenarios: z.array(episode.shape.scenario).min(1).max(8),
+  }),
   z.object({
     type: z.literal("comparePlayback"),
     ...scope,
@@ -160,6 +184,7 @@ export type ReplyData =
   | { type: "checkpoint"; checkpoint: ExperimentCheckpoint }
   | { type: "playback"; snapshot: PlaybackSnapshot }
   | { type: "comparison"; comparison: SensorComparison }
+  | { type: "controllerComparison"; comparison: ControllerComparison }
   | { type: "disposed" };
 interface EventBase {
   protocolVersion: 1;

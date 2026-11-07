@@ -1,5 +1,6 @@
 import { ExperimentRunner } from "../core/experiment";
 import { ComparisonRunner } from "../core/comparison";
+import { ControllerComparisonRunner } from "../core/comparison/controllers";
 import {
   createEpisode,
   restoreEpisode,
@@ -47,8 +48,16 @@ export class SimulationRuntime {
   private frameId = 0;
   private inFlight: number | null = null;
   private checkpointRequest: string | null = null;
-  private comparison: { requestId: string; runner: ComparisonRunner } | null =
-    null;
+  private comparison:
+    | (
+        | { kind: "sensor"; requestId: string; runner: ComparisonRunner }
+        | {
+            kind: "controllers";
+            requestId: string;
+            runner: ControllerComparisonRunner;
+          }
+      )
+    | null = null;
   constructor(
     readonly sessionId: string,
     private emit: (event: RuntimeEvent) => void,
@@ -260,13 +269,23 @@ export class SimulationRuntime {
           throw new Error("Pause playback before comparing");
         const runner = new ComparisonRunner(p.runner.checkpoint(), c.channel);
         this.cancelComparison("Comparison replaced");
-        this.comparison = { requestId, runner };
+        this.comparison = { kind: "sensor", requestId, runner };
         return;
       }
       case "replayComparison": {
         const runner = new ComparisonRunner(c.source, c.channel);
         this.cancelComparison("Comparison replaced");
-        this.comparison = { requestId, runner };
+        this.comparison = { kind: "sensor", requestId, runner };
+        return;
+      }
+      case "compareControllers": {
+        const runner = new ControllerComparisonRunner(
+          c.parent,
+          c.child,
+          c.scenarios,
+        );
+        this.cancelComparison("Comparison replaced");
+        this.comparison = { kind: "controllers", requestId, runner };
         return;
       }
       case "openPlayback": {
@@ -441,10 +460,16 @@ export class SimulationRuntime {
           job.runner.advance(16);
         if (job.runner.done) {
           this.comparison = null;
-          this.reply(job.requestId, {
-            type: "comparison",
-            comparison: job.runner.result()!,
-          });
+          if (job.kind === "sensor")
+            this.reply(job.requestId, {
+              type: "comparison",
+              comparison: job.runner.result()!,
+            });
+          else
+            this.reply(job.requestId, {
+              type: "controllerComparison",
+              comparison: job.runner.result()!,
+            });
         }
       } catch (error) {
         this.comparison = null;
