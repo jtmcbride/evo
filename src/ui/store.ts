@@ -15,34 +15,19 @@ import { hash } from "../core/canonical";
 import { generateScenario } from "../core/world/scenario";
 import type { Genome, Scenario, TrialResult } from "../core/model";
 import type { GenerationCommit } from "../core/experiment";
-export interface Settings {
-  name: string;
-  preset: "open" | "obstacles";
-  seed: string;
-  population: number;
-  foodCount: number;
-  obstacleCount: number;
-  seconds: number;
-  trials: number;
-  elites: number;
-  immigrants: number;
-  mutationProbability: number;
-  mutationSigma: number;
-}
-export const DEFAULT_SETTINGS: Settings = {
-  name: "Foraging study",
-  preset: "open",
-  seed: "42",
-  population: 128,
-  foodCount: 48,
-  obstacleCount: 5,
-  seconds: 60,
-  trials: 3,
-  elites: 4,
-  immigrants: 8,
-  mutationProbability: 0.1,
-  mutationSigma: 0.05,
-};
+import {
+  DEFAULT_SETTINGS,
+  type Settings,
+  type GenerationSummary,
+  type Replay,
+  type SavedSession,
+  type SavedEntry,
+  type SavedHandle,
+  fingerprint,
+  withRuntime,
+} from "../persistence/model";
+export { DEFAULT_SETTINGS };
+export type { Settings, GenerationSummary };
 export function prepare(settings: Settings): ExperimentDefinition {
   const s = settings;
   if (
@@ -101,21 +86,18 @@ export interface Selection {
   historyGeneration: number | null;
   playbackId: string;
 }
-export interface GenerationSummary {
-  generation: number;
-  best: number;
-  median: number;
-  validation: number | null;
-  commitId: string;
-  championId: string;
-}
-interface Replay {
-  generation: number;
-  genome: Genome;
-  scenarios: Scenario[];
-  results: TrialResult[];
+export interface StorageView {
+  state: "opening" | "saved" | "saving" | "error" | "conflict" | "memory";
+  id: string | null;
+  revision: number;
+  entries: SavedEntry[];
+  lastSaved: number | null;
+  blocked: boolean;
+  notice: string | null;
+  archiveBusy: boolean;
 }
 export interface ViewState {
+  storage: StorageView;
   ready: boolean;
   failed: boolean;
   error: string | null;
@@ -136,7 +118,27 @@ export interface ViewState {
   sensorOnly: boolean;
   showTrail: boolean;
 }
+import {
+  MemoryRepository,
+  RevisionConflict,
+  type Repository,
+} from "../persistence/repository";
+import { ENGINE_VERSION } from "../core/model";
 export class WorkbenchStore {
+  readonly ready: Promise<void>;
+  private activeSettings: Settings = { ...DEFAULT_SETTINGS };
+  private provenance: SavedSession["provenance"] = {
+    created: fingerprint(),
+    current: fingerprint(),
+    changes: [],
+  };
+  private pendingSave: {
+    commit: GenerationCommit;
+    session: SavedSession;
+    epoch: number;
+  } | null = null;
+  private saving = false;
+
   private view: ViewState;
   private listeners = new Set<() => void>();
   private frameListeners = new Set<() => void>();
@@ -152,8 +154,21 @@ export class WorkbenchStore {
   private serial = 0;
   private disposed = false;
   private unsubscribe: () => void;
-  constructor(readonly client = new SimulationClient()) {
+  constructor(
+    readonly client = new SimulationClient(),
+    readonly repository: Repository = new MemoryRepository(),
+  ) {
     this.view = {
+      storage: {
+        state: "opening",
+        id: null,
+        revision: 0,
+        entries: [],
+        lastSaved: null,
+        blocked: false,
+        notice: null,
+        archiveBusy: false,
+      },
       ready: false,
       failed: false,
       error: null,
@@ -175,12 +190,162 @@ export class WorkbenchStore {
       showTrail: true,
     };
     this.unsubscribe = client.subscribe(this.onEvent);
-    void client.ready
-      .then(() => {
-        if (!this.disposed) this.update({ ready: true });
-      })
-      .catch((error) => this.problem(error, true));
+    this.ready = this.boot();
   }
+  private storage(patch: Partial<StorageView>) {
+    this.update({ storage: { ...this.view.storage, ...patch } });
+  }
+  private async boot() {
+    try {
+      await this.client.ready;
+    } catch (error) {
+      this.problem(error, true);
+      return;
+    }
+    try {
+      this.storage({ entries: await this.repository.list(), state: "memory" });
+      const id = await this.repository.active();
+      if (id) await this.loadSaved(id);
+    } catch (error) {
+      this.storage({
+        state: "error",
+        notice: `Local save recovery failed: ${String(error)}`,
+      });
+    }
+    this.update({ ready: true });
+  }
+  private async refreshLibrary() {
+    try {
+      this.storage({ entries: await this.repository.list() });
+    } catch (error) {
+      this.problem(error);
+    }
+  }
+  private makeSession(
+    checkpoint = this.checkpoint!,
+    history = this.view.history,
+    replays = this.replays,
+  ): SavedSession {
+    const selected = this.view.selection,
+      frame = this.frame;
+    const retained =
+      this.selectedReplay &&
+      !replays.some((r) => r.generation === this.selectedReplay!.generation)
+        ? [...replays, this.selectedReplay]
+        : replays;
+    return structuredClone({
+      formatVersion: 1,
+      engineVersion: ENGINE_VERSION,
+      name: this.view.name ?? this.activeSettings.name,
+      settings: this.activeSettings,
+      checkpoint,
+      history,
+      replays: retained,
+      bookmark: selected
+        ? {
+            genome: selected.genome,
+            generation: selected.generation,
+            label: selected.label,
+            scenario: selected.scenario,
+            trial: selected.trial,
+            recordedResult: selected.recordedResult,
+            historyGeneration: selected.historyGeneration,
+            tick: frame?.state.tick ?? 0,
+          }
+        : null,
+      provenance: this.provenance,
+    });
+  }
+  getExportSession(): SavedSession {
+    if (!this.checkpoint) throw new Error("Create an experiment first");
+    return this.pendingSave
+      ? structuredClone(this.pendingSave.session)
+      : this.makeSession();
+  }
+  async loadSaved(id: string) {
+    if (this.saving) return;
+    this.update({ initializing: true, error: null });
+    try {
+      const handle = await this.repository.load(id);
+      await this.activateSaved(handle);
+      await this.repository.activate(id);
+      await this.refreshLibrary();
+    } catch (error) {
+      this.problem(error);
+      this.storage({ state: "error", notice: String(error) });
+    } finally {
+      this.update({ initializing: false });
+    }
+  }
+  private async activateSaved(handle: SavedHandle) {
+    const session = withRuntime(handle.session, fingerprint()),
+      cp = session.checkpoint;
+    const reply = await this.client.request({
+      type: "initialize",
+      checkpoint: cp,
+    });
+    if (reply.type !== "status")
+      throw new Error("Unexpected initialization reply");
+    this.scope = { experimentId: cp.definition.id, epoch: reply.status.epoch };
+    this.checkpoint = cp;
+    this.activeSettings = session.settings;
+    this.provenance = session.provenance;
+    this.pendingSave = null;
+    this.replays = [...session.replays]
+      .sort((a, b) => a.generation - b.generation)
+      .slice(-50);
+    this.selectedReplay =
+      session.bookmark?.historyGeneration !== null
+        ? (session.replays.find(
+            (r) => r.generation === session.bookmark?.historyGeneration,
+          ) ?? null)
+        : null;
+    this.frame = null;
+    this.inspectFrame(true);
+    this.update({
+      name: session.name,
+      definition: cp.definition,
+      draft: session.settings,
+      preview: firstScenario(cp.definition),
+      configError: null,
+      history: session.history,
+      replayGenerations: this.replays.map((r) => r.generation),
+      selection: null,
+      population: cp.population.map((g) => ({
+        id: g.id,
+        birthGeneration: g.birthGeneration,
+      })),
+      status: reply.status,
+    });
+    this.storage({
+      id: handle.entry.id,
+      revision: handle.entry.revision,
+      state: "saved",
+      lastSaved: handle.entry.updatedAt,
+      blocked: false,
+      notice: session.provenance.changes.length
+        ? "This checkpoint has been continued in a different browser runtime; exact cross-runtime replay is not guaranteed."
+        : handle.entry.interrupted
+          ? `Training stopped before the next save. Recovered population ${cp.generation}; its unfinished generation will rerun.`
+          : null,
+    });
+    if (session.bookmark) {
+      const { tick, ...selection } = session.bookmark;
+      await this.open(selection);
+      if (tick !== 1) await this.playback("seek", tick);
+    } else if (cp.generation === 0)
+      await this.open({
+        genome: cp.population[0],
+        generation: 0,
+        label: "Initial controller",
+        scenario: firstScenario(cp.definition),
+        trial: 0,
+        recordedResult: null,
+        historyGeneration: null,
+      });
+    else await this.selectPopulation(cp.population[0].id);
+  }
+
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
     return () => {
@@ -311,7 +476,7 @@ export class WorkbenchStore {
       commitId: commit.id,
       championId: genome.id,
     };
-    this.replays = [
+    const replays = [
       ...this.replays,
       {
         generation: summary.generation,
@@ -320,28 +485,115 @@ export class WorkbenchStore {
         results: commit.record.trials[index],
       },
     ].slice(-50);
-    this.checkpoint = commit.nextCheckpoint;
-    this.update({
-      history: [...this.view.history, summary].slice(-1000),
-      replayGenerations: this.replays.map((r) => r.generation),
-      population: commit.nextCheckpoint.population.map((g) => ({
-        id: g.id,
-        birthGeneration: g.birthGeneration,
-      })),
-    });
-    void this.client
-      .request({
-        type: "commitSucceeded",
-        experimentId: cp.definition.id,
-        epoch,
-        commitId: commit.id,
-      })
-      .catch((error) => {
-        if (this.scope?.epoch === epoch) this.problem(error);
-      });
+    const session = this.makeSession(
+      commit.nextCheckpoint,
+      [...this.view.history, summary].slice(-1000),
+      replays,
+    );
+    this.pendingSave = { commit, session, epoch };
+    void this.retrySave();
   }
+  async retrySave() {
+    if (this.saving || !this.checkpoint) return;
+    this.saving = true;
+    this.storage({ state: "saving", blocked: true });
+    const pending = this.pendingSave;
+    try {
+      let id = this.view.storage.id,
+        revision = this.view.storage.revision;
+      if (!id) {
+        const created = await this.repository.create(this.makeSession());
+        id = created.entry.id;
+        revision = created.entry.revision;
+        this.storage({ id, revision });
+      }
+      const session = pending?.session ?? this.makeSession();
+      const interrupted = pending
+        ? (this.view.status?.targetGeneration ?? 0) >
+          session.checkpoint.generation
+        : this.view.status?.phase === "evaluating";
+      const handle = await this.repository.save(
+        id,
+        revision,
+        session,
+        pending?.commit,
+        interrupted,
+      );
+      this.storage({
+        id,
+        revision: handle.entry.revision,
+        state: "saved",
+        lastSaved: handle.entry.updatedAt,
+        blocked: false,
+        notice: null,
+      });
+      if (pending) {
+        this.checkpoint = handle.session.checkpoint;
+        this.replays = [...handle.session.replays]
+          .sort((a, b) => a.generation - b.generation)
+          .slice(-50);
+        this.pendingSave = null;
+        this.update({
+          history: handle.session.history,
+          replayGenerations: this.replays.map((r) => r.generation),
+          population: this.checkpoint.population.map((g) => ({
+            id: g.id,
+            birthGeneration: g.birthGeneration,
+          })),
+        });
+        await this.client.request({
+          type: "commitSucceeded",
+          experimentId: this.checkpoint.definition.id,
+          epoch: pending.epoch,
+          commitId: pending.commit.id,
+        });
+      }
+      await this.refreshLibrary();
+    } catch (error) {
+      this.storage({
+        state: error instanceof RevisionConflict ? "conflict" : "error",
+        blocked: true,
+        notice: String(error),
+      });
+      if (pending)
+        await this.client
+          .request({
+            type: "commitFailed",
+            experimentId: pending.session.checkpoint.definition.id,
+            epoch: pending.epoch,
+            commitId: pending.commit.id,
+            message: String(error).slice(0, 1000),
+          })
+          .catch(() => {});
+    } finally {
+      this.saving = false;
+    }
+  }
+  async saveSeparate() {
+    if (this.saving || !this.checkpoint) return;
+    this.update({ initializing: true });
+    try {
+      const handle = await this.repository.create(
+        withRuntime(this.getExportSession(), fingerprint()),
+      );
+      await this.activateSaved(handle);
+      await this.refreshLibrary();
+    } catch (error) {
+      this.problem(error);
+    } finally {
+      this.update({ initializing: false });
+    }
+  }
+
   async create() {
-    if (this.view.initializing) return;
+    await this.ready;
+    if (this.view.initializing || this.saving) return;
+    if (this.pendingSave) {
+      this.problem(
+        "Retry the pending save, export it, or load a saved population before replacing this experiment.",
+      );
+      return;
+    }
     this.update({ initializing: true, error: null });
     const serial = ++this.serial;
     try {
@@ -355,11 +607,18 @@ export class WorkbenchStore {
         throw new Error("Unexpected initialization reply");
       this.scope = { experimentId: d.id, epoch: reply.status.epoch };
       this.checkpoint = cp;
+      this.activeSettings = { ...this.view.draft };
+      this.provenance = {
+        created: fingerprint(),
+        current: fingerprint(),
+        changes: [],
+      };
       this.replays = [];
+      this.selectedReplay = null;
       this.frame = null;
       this.inspectFrame(true);
       this.update({
-        name: this.view.draft.name,
+        name: this.activeSettings.name,
         definition: d,
         history: [],
         replayGenerations: [],
@@ -370,6 +629,26 @@ export class WorkbenchStore {
         })),
         status: reply.status,
       });
+      try {
+        const handle = await this.repository.create(this.makeSession());
+        this.storage({
+          id: handle.entry.id,
+          revision: 0,
+          state: "saved",
+          lastSaved: handle.entry.updatedAt,
+          blocked: false,
+          notice: null,
+        });
+        await this.refreshLibrary();
+      } catch (error) {
+        this.storage({
+          id: null,
+          revision: 0,
+          state: "error",
+          blocked: false,
+          notice: `Initial population is in memory; saving failed: ${String(error)}`,
+        });
+      }
       await this.open({
         genome: cp.population[0],
         generation: 0,
@@ -391,6 +670,25 @@ export class WorkbenchStore {
   }
   async train(generations: number) {
     try {
+      if (this.view.storage.blocked || this.pendingSave)
+        throw new Error(
+          "Retry or export the pending save before training again.",
+        );
+      if (this.view.storage.id) {
+        try {
+          await this.repository.markRunning(
+            this.view.storage.id,
+            this.view.storage.revision,
+          );
+        } catch (error) {
+          this.storage({
+            state: error instanceof RevisionConflict ? "conflict" : "error",
+            blocked: true,
+            notice: String(error),
+          });
+          return;
+        }
+      }
       await this.client.request({
         type: "startTraining",
         ...this.requiredScope(),
@@ -550,5 +848,6 @@ export class WorkbenchStore {
     this.frameListeners.clear();
     this.inspectionListeners.clear();
     this.client.close();
+    this.repository.close();
   }
 }

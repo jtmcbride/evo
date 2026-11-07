@@ -55,6 +55,8 @@ export function Training({ store }: { store: WorkbenchStore }) {
             !v.definition ||
             v.initializing ||
             v.failed ||
+            v.storage.blocked ||
+            v.storage.state === "saving" ||
             !Number.isInteger(batch) ||
             batch < 1 ||
             batch > 100

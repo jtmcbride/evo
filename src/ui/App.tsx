@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import type { WorkbenchStore } from "./store";
 import { useView } from "./hooks";
 import { Setup } from "./experiments/Setup";
+import { Storage } from "./experiments/Storage";
 import { Training } from "./experiments/Training";
 import { History } from "./experiments/History";
 import { Arena } from "./arena/Arena";
@@ -79,6 +80,7 @@ export function App({ store }: { store: WorkbenchStore }) {
         </div>
       </header>
       <Notices store={store} />
+      <Storage store={store} />
       <Training store={store} />
       <main className="workbench" data-pane={pane}>
         <Setup store={store} compact={compact} />
@@ -113,7 +115,7 @@ export function App({ store }: { store: WorkbenchStore }) {
           Evolution changes controllers between generations. Weights stay fixed
           within a trial.
         </span>
-        <span>Engine 1 · local session</span>
+        <span>Engine 1 · local saves</span>
       </footer>
     </div>
   );

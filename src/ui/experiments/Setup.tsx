@@ -48,7 +48,12 @@ export function Setup({
         >
           <fieldset
             disabled={
-              !v.ready || v.failed || v.initializing || !!v.status?.training
+              !v.ready ||
+              v.failed ||
+              v.initializing ||
+              v.storage.state === "saving" ||
+              v.storage.blocked ||
+              !!v.status?.training
             }
           >
             <label>
@@ -134,8 +139,8 @@ export function Setup({
         <Preview scenario={v.preview} />
       </details>
       <p className="session-note">
-        <span className="session-mark" /> Session only. Keep this tab open;
-        reloading clears the experiment.
+        <span className="session-mark" /> Completed generations save in this
+        browser. Export checkpoints for backups.
       </p>
     </aside>
   );
