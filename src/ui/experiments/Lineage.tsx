@@ -393,6 +393,7 @@ export function Lineage({ store }: { store: WorkbenchStore }) {
                 busy ||
                 v.comparing ||
                 v.lineageComparing ||
+                v.matrixComparing ||
                 (suite === "recorded" ? !family.replay : !v.selection)
               }
               onClick={() => void store.compareLineage(suite)}

@@ -1,4 +1,4 @@
-**M5–M8 interactive workbench**
+**M5–M9 interactive workbench**
 
 The main application is now a working neuroevolution workbench. Run `npm run dev` and open the local URL. The separate `runtime.html` diagnostic page remains available from the header.
 
@@ -38,3 +38,5 @@ Verification on pinned Chromium against the production build under `/evo/`:
 - Typecheck, lint, and the production build pass. Desktop and mobile screenshots were visually inspected. Broader browser/device acceptance and scientific benchmarks remain release work.
 
 M8 adds a paginated **Controller lineage** panel. Browse ancestors and children, find a retained controller by ID, inspect exact parent/child mutation values, and replay recorded trials. Shared-suite comparisons evaluate both controllers afresh on identical maps. Full lineage exports include all retained births and generation records. See [lineage behavior and acceptance](lineage.md).
+
+M9 adds **Branches & common evaluations**: inspect a proposed diff, fork the saved population, and compare independently training-selected champions on both source and branch environment suites. Saved matrices replay from captured weights/maps after import. **Sensor & brain interventions** supports sensor masks, post-tanh hidden clamps, and actual parent-weight restoration. See [M9 workflows and acceptance](branches.md).

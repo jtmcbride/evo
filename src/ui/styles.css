@@ -19,6 +19,172 @@
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --display: "Avenir Next", "Trebuchet MS", sans-serif;
 }
+.branches-panel {
+  padding: 24px;
+  margin-top: 20px;
+}
+.branches-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+.branches-panel > p,
+.branch-caption {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 13px;
+}
+.branch-provenance {
+  padding: 16px;
+  background: #edf7f7;
+  border-left: 3px solid var(--teal);
+  margin: 18px 0;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.branch-provenance p {
+  margin: 8px 0;
+}
+.branch-provenance summary {
+  cursor: pointer;
+  padding-top: 12px;
+  font-weight: 600;
+}
+.branch-provenance ol {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+.branch-scroll-hint {
+  display: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 760px) {
+  .branch-scroll-hint {
+    display: block;
+  }
+}
+.branch-provenance code {
+  font-size: 11px;
+}
+.branch-create {
+  border-block: 1px solid var(--line);
+  padding: 14px 0;
+  margin: 18px 0;
+}
+.branch-create summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.branch-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+.branch-fields label,
+.branch-comparison-controls label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.branch-fields input {
+  width: 100%;
+  min-width: 0;
+}
+.branch-table-scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+.branches-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.branches-panel td,
+.branches-panel th {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 9px;
+  text-align: right;
+}
+.branches-panel th:first-child {
+  text-align: left;
+}
+.branches-panel td {
+  font-family: var(--mono);
+}
+.branch-comparison-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+.branch-comparison-controls select {
+  max-width: 330px;
+}
+.branch-comparison-controls input {
+  width: 100px;
+}
+.branch-matrix-status {
+  min-height: 1.6em;
+  overflow-wrap: anywhere;
+}
+.branch-matrix {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+.branch-matrix table {
+  min-width: 590px;
+}
+.branch-matrix table small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.branch-matrix th {
+  max-width: 300px;
+  overflow-wrap: anywhere;
+}
+.branch-matrix td strong {
+  color: var(--teal);
+  font-size: 19px;
+  font-weight: 650;
+}
+.branch-matrix details summary {
+  cursor: pointer;
+  padding: 14px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.comparison-controls input {
+  width: 120px;
+}
+@media (max-width: 760px) {
+  .branches-panel {
+    padding: 16px;
+  }
+  .branch-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .branch-comparison-controls {
+    align-items: stretch;
+  }
+  .branch-comparison-controls label,
+  .branch-comparison-controls select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+}
 .lineage-panel {
   padding: 24px;
   margin-top: 20px;

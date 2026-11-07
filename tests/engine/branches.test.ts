@@ -17,7 +17,7 @@ import {
   type EpisodeCheckpoint,
 } from "../../src/core/episode";
 import { ComparisonRunner, comparisonChoice } from "../../src/core/comparison";
-import { parameterHash } from "../../src/core/canonical";
+import { parameterHash, hash } from "../../src/core/canonical";
 import { encode, decode } from "../../src/core/codec";
 import { generateScenario } from "../../src/core/world/scenario";
 import { DEFAULT_WORLD, type Genome } from "../../src/core/model";
@@ -240,4 +240,16 @@ test("every matrix cell evaluates its champion on the referenced common suite", 
   const corrupt = structuredClone(matrix);
   corrupt.cells[0].suiteId = matrix.suites[1].id;
   expect(() => validateMatrix(corrupt)).toThrow(/references/);
+  const mixed = structuredClone(input);
+  mixed.suites[0].scenarios[1] = generateScenario("mixed-config", {
+    ...cp.definition.world,
+    sensorRange: 77,
+  });
+  mixed.suites[0].id = hash([
+    "branch-suite-v1",
+    mixed.suites[0].scenarios.map((s) => s.hash),
+  ]);
+  expect(() => new BranchMatrixRunner(mixed)).toThrow(
+    /one explicit configuration/,
+  );
 });

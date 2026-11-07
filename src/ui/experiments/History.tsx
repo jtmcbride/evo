@@ -125,6 +125,15 @@ export function History({ store }: { store: WorkbenchStore }) {
         <span className="legend-validation">▰ Fixed validation</span>
       </div>
       <Chart history={v.history} />
+      {v.branchOrigins.some((o) =>
+        o.changes.some((c) => c.group === "world"),
+      ) && (
+        <p className="chart-caption">
+          Environment settings changed at the recorded branch points. Use the
+          common evaluation matrix to compare controllers across those
+          environments.
+        </p>
+      )}
       <p className="chart-caption">
         Training maps rotate each generation. Validation uses fixed maps every
         10 generations and never selects parents.

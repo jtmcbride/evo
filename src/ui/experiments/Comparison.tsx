@@ -13,6 +13,7 @@ const label = (v: Intervention) =>
       : `Parameter ${v.parameter} restored from parent`;
 
 const number = (v: number) => v.toFixed(4);
+const exact = (v: number) => (Object.is(v, -0) ? "−0" : String(v));
 function Outcomes({ record }: { record: SensorComparison }) {
   const a = record.control,
     b = record.masked,
@@ -193,8 +194,8 @@ function Outcomes({ record }: { record: SensorComparison }) {
       )}
       {variant.kind === "parentWeight" && (
         <p className="comparison-context">
-          Parameter {variant.parameter}: child {String(raw)} → parent{" "}
-          {String(variant.value)}. Parent <code>{variant.parentId}</code> ·
+          Parameter {variant.parameter}: child {exact(raw)} → parent{" "}
+          {exact(variant.value)}. Parent <code>{variant.parentId}</code> ·
           weights <code>{variant.parentParameterHash}</code>. The saved child
           genome is unchanged.
         </p>
@@ -231,6 +232,7 @@ export function Comparison({ store }: { store: WorkbenchStore }) {
     !v.status?.seeking &&
     !frame.state.terminal &&
     !v.comparing &&
+    !v.matrixComparing &&
     !v.lineageComparing;
   return (
     <section
@@ -396,7 +398,11 @@ export function Comparison({ store }: { store: WorkbenchStore }) {
             </label>
             <button
               disabled={
-                v.comparing || v.lineageComparing || v.initializing || v.failed
+                v.comparing ||
+                v.lineageComparing ||
+                v.matrixComparing ||
+                v.initializing ||
+                v.failed
               }
               onClick={() => void store.compareSensor(0, record)}
             >

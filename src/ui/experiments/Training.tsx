@@ -31,7 +31,12 @@ export function Training({ store }: { store: WorkbenchStore }) {
         </strong>
       </div>
       <div className="training-metric">
-        <span>Latest best</span>
+        <span>
+          {latest &&
+          latest.generation < (v.branchOrigins.at(-1)?.source.generation ?? 0)
+            ? "Inherited source best"
+            : "Latest best"}
+        </span>
         <strong>
           {latest ? latest.best.toFixed(2) : "—"}
           <small> food / trial</small>

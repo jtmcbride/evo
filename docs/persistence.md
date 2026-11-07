@@ -1,4 +1,4 @@
-**M6–M8 durable experiments and archives**
+**M6–M9 durable experiments and archives**
 
 The main workbench automatically saves the initial population and every completed generation in this browser. The save indicator and experiment selector show the current local save. Starting another experiment creates a separate save, including when its seed/name matches an existing run. Reload opens the most recently selected experiment paused at its last accepted population. Retained history and the checkpoint's playback bookmark are restored.
 
@@ -41,3 +41,5 @@ Verification:
 M7 adds archive/replay, migration, concurrent-save, and comparison-failure acceptance. See [sensor interventions](interventions.md) for current verification and record limits.
 
 M8 schema 3 adds atomic sparse birth retention and lazy backfill of M6/M7 full-weight records. Full anchors reference deduplicated binary parameter blobs. **Export full lineage** uses archive version 3 for all retained births, generation membership, original scenarios and trial results, while checkpoint export stays version 2. Legacy checkpoint-only imports are explicitly partial. See [lineage reconstruction and archive verification](lineage.md) for current acceptance and limits.
+
+M9 schema 4 adds independent checksummed evaluation matrices. Fork creation checks the source revision inside the new-experiment transaction, preserving source bytes and publishing no partial branch. Archive version 4 carries branch provenance, generation definitions, extended interventions, parent-restoration weights, and all four matrix cells. Versions 1–3 remain readable. See [branch and matrix recovery](branches.md).

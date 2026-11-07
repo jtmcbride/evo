@@ -1,6 +1,6 @@
 **Evolution Lab**
 
-A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M8 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser workbench includes seeded setup, training controls, Canvas playback, an inspectable neural graph, sensor readings, measurements, and training/validation history. Historical champions replay their original trials. Matched sensor interventions compare an unchanged control episode against a one-input mask, with saved outcomes and portable replay.
+A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M9 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser workbench includes seeded setup, training controls, Canvas playback, an inspectable neural graph, sensor readings, measurements, and training/validation history. Historical champions replay their original trials. Matched sensor interventions compare an unchanged control episode against a one-input mask, with saved outcomes and portable replay.
 
 Use Node 24.18.0 and the committed npm lockfile:
 
@@ -61,3 +61,5 @@ The save indicator exposes retry and stale-tab recovery. Failed writes pause tra
 Pause a selected trial and use **Sensor intervention** to mask one of its 20 inputs at the next decision. Compare paths, food, contact time, survival, and motor commands, then replay the saved pair after reload or archive import. Comparisons preserve the original controller and training population. [The intervention guide](docs/interventions.md) explains decision timing, saved sources, and interpretation.
 
 The **Controller lineage** panel retains ancestors and unsuccessful descendants, displays exact mutation values, and replays original recorded trials. Compare parent and child on shared maps. Use **Export full lineage** to preserve all retained births and generation trials; ordinary checkpoint exports remain smaller, partial-history backups. [The lineage guide](docs/lineage.md) describes reconstruction, bounded navigation, migration, and verified archive replay.
+
+Use **Branches & common evaluations** to fork a saved population with explicit body/sensor/evolution changes while preserving paired schedules. Compare training-selected champions on both environment suites, save the full matrix, and replay it after import. The intervention panel also supports post-tanh neuron clamps and exact parent-weight restoration. [The M9 guide](docs/branches.md) documents source preservation, provenance, matrices, and archive compatibility.

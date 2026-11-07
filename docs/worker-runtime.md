@@ -21,6 +21,8 @@ One module Web Worker owns training and independent selected-trial playback. Bot
 | `comparePlayback` | Require a paused selected episode, copy its checkpoint, and return a completed control/masked pair without advancing playback |
 | `replayComparison` | Run a pair from its saved source independently of playback; comparison commands require the active experiment scope |
 | `compareControllers` | Evaluate frozen parent/child genomes on an explicit shared scenario suite from tick zero; use the active experiment scope and bounded comparison scheduler |
+| `compareIntervention` / `replayIntervention` | Run or restore a matched sensor/clamp/parent-weight comparison at the next decision; require the active experiment scope |
+| `compareBranchMatrix` | Evaluate both frozen training-selected champions on both explicit environment suites in the bounded comparison slot |
 | `dispose` | Cancel deferred work and release the worker; the client rejects outstanding requests |
 
 Snapshot receipts and timeout cancellation are internal one-way commands. Normal requests have a default 30-second timeout; startup is bounded as well. The client caps queued/pending requests at 64. Observers receive structured training/playback errors and fatal worker errors. A fatal transport error rejects all pending requests and terminates the client. Call `client.close()` to force cleanup when a view is removed.
@@ -48,3 +50,5 @@ Acceptance on this Mac (Apple M1 Pro), Playwright 1.65.0, Chromium 158.0.8127.18
 | Build location | Production assets and worker loaded under `/evo/` |
 
 These are focused-tab smoke measurements with five pause samples and one full generation, not percentile estimates or broad device performance guarantees. The browser regression test allows 250 ms maximum acknowledgment time for CI tolerance; the measured samples satisfy the plan's provisional 100 ms target. Firefox/WebKit functional acceptance and broader performance measurements remain release work.
+
+M9 uses the same bounded comparison job slot for neural interventions and branch matrices. Original episode/training buffers stay independent. Matrix replies retain controller generation/identity and explicit realized suite references. See [M9 runtime semantics](branches.md).

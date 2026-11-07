@@ -95,6 +95,10 @@ export function validateMatrixInput(input: MatrixInput) {
       throw new Error("Invalid common comparison suite");
     suite.scenarios.forEach((s) => {
       validateScenario(s);
+      if (hash(s.config) !== hash(suite.scenarios[0].config))
+        throw new Error(
+          "A matrix environment suite must use one explicit configuration",
+        );
       if (
         s.config.maxTicks > 5400 ||
         s.food.length > 200 ||

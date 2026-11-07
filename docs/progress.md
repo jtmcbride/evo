@@ -47,3 +47,11 @@ Added immutable birth retention, sparse mutation patches, periodic/depth-bounded
 The lineage explorer shows bounded ancestor/child pages, controller lookup, exact mutation values, and replay of original retained trials. Parent and child can be evaluated on an explicit common map suite with paired trajectories and outcomes, independently of training. Version-3 full-lineage archives preserve retained births, generation membership, scenarios, trial results, and reconstruction data; older checkpoint imports remain compatible and honestly partial.
 
 Sixty-five engine/runtime/store/database/archive tests and twenty-six production Chromium browser tests pass, with typecheck, lint, build, and automated desktop/mobile accessibility acceptance. Full archive import in a fresh browser reproduces ancestor replay, shared-suite outcomes/paths, and subsequent evolution. See [lineage semantics and acceptance](lineage.md). M9 branches and extended interventions are next; static publication and release benchmarks remain M10.
+
+**M9 complete**
+
+Added branches from saved ready-to-evaluate populations, immutable source provenance/configuration diffs, paired seed schedules, preserved generation/membership, and branch-specific new birth identities. Forks publish atomically under source-revision protection and retain inherited lineage with each generation's actual definition. Nested branch provenance and partial-ancestry limits survive portable restore.
+
+Added post-tanh hidden-neuron clamps and actual reconstructed parent-weight restoration to matched replay, with raw/effective activity, exact decision timing, immutable genomes, and saved comparison replay. Training-selected source/branch champions now evaluate across both original and modified environment suites in a complete common-suite matrix. Matrix records persist independently, survive failed saves and generation commits, and replay after fresh-context import.
+
+Seventy-seven engine/runtime/store/database/archive tests and thirty production Chromium tests pass, with typecheck, lint, build, and desktop/mobile accessibility acceptance. See [controlled branches, matrices, and interventions](branches.md). M10 release benchmarks, examples, broader browser acceptance, and static publication remain.
