@@ -75,11 +75,7 @@ export class LabDatabase extends Dexie {
     });
   }
 }
-function prepareRows(
-  id: string,
-  session: SavedSession,
-  commit?: GenerationCommit,
-) {
+function prepareRows(id: string, session: SavedSession) {
   const genomes = new Map<string, Genome>();
   for (const g of session.checkpoint.population) genomes.set(g.id, g);
   for (const r of session.replays) genomes.set(r.genome.id, r.genome);
@@ -92,30 +88,12 @@ function prepareRows(
   );
   if (session.bookmark)
     scenarios.set(session.bookmark.scenario.hash, session.bookmark.scenario);
-  if (commit)
-    for (const s of [
-      ...commit.record.scenarios,
-      ...commit.record.validationScenarios,
-    ])
-      scenarios.set(s.hash, s);
   // Numerical checkpoint payloads stay small; comparison records have independent checksums.
   const payload = encode({ ...session, comparisons: [], lineage: undefined }),
     trials: DataRow[] = [],
     evaluations: DataRow[] = [];
   const result = (data: unknown, key: string) =>
     trials.push({ experimentId: id, key, data });
-  if (commit) {
-    commit.record.trials.forEach((list, slot) =>
-      list.forEach((t, i) => {
-        result(t, `${commit.record.generation}:training:${slot}:${i}`);
-        evaluations.push({ experimentId: id, key: t.spec.hash, data: t.spec });
-      }),
-    );
-    commit.record.validation.forEach((t, i) => {
-      result(t, `${commit.record.generation}:validation:${i}`);
-      evaluations.push({ experimentId: id, key: t.spec.hash, data: t.spec });
-    });
-  }
   for (const r of session.replays)
     r.results.forEach((t, i) => {
       result(t, `${r.generation}:champion:${i}`);
@@ -222,10 +200,10 @@ export class IndexedRepository implements Repository {
     commit?: GenerationCommit,
     interrupted = false,
   ) {
-    const session = parseSession(value);
+    const session = parseSession({ ...value, lineage: undefined });
     if (commit) validateCommit(commit, session);
     await this.lineageStorage.ensure(id);
-    const rows = prepareRows(id, session, commit);
+    const rows = prepareRows(id, session);
     return this.db.transaction("rw", this.db.tables, async () => {
       const previous = await this.db.experiments.get(id);
       if (!previous) throw new Error("Saved experiment not found");
@@ -279,17 +257,9 @@ export class IndexedRepository implements Repository {
     rows: ReturnType<typeof prepareRows>,
     previous?: ExperimentCheckpoint,
   ) {
-    const full = await this.lineageStorage.capture(id, session, previous);
+    await this.lineageStorage.capture(id, session, previous);
     for (const c of session.comparisons ?? [])
       await this.writeComparison(id, c);
-    await this.db.parameters.bulkPut(
-      rows.genomes
-        .filter((g) => full.has(g.key))
-        .map((g) => ({
-          hash: (g.data as Genome).parameterHash,
-          values: g.parameters,
-        })),
-    );
     await this.db.genomes.bulkPut(
       rows.genomes.map(({ parameters, ...g }) => {
         void parameters;

@@ -10,6 +10,7 @@ import { savedFixture, nextFixture } from "./fixtures";
 import { contentHash } from "../../src/core/lineage";
 import { decode } from "../../src/core/codec";
 import type { Genome } from "../../src/core/model";
+import { retainGenome, type LineageNode } from "../../src/core/lineage";
 
 test("retains unsuccessful births, sparse patches and original trials across full archive import", async () => {
   const repo = new IndexedRepository(`lineage-${crypto.randomUUID()}`);
@@ -64,6 +65,18 @@ test("retains unsuccessful births, sparse patches and original trials across ful
     const fresh = await repo.create(restored),
       reopened = await repo.lineage(fresh.entry.id, retired.genome.id);
     expect(reopened).toEqual(view);
+    expect(
+      await repo.db.genomes
+        .where("experimentId")
+        .equals(fresh.entry.id)
+        .count(),
+    ).toBe(lineage.nodes.length);
+    expect(
+      await repo.db.memberships
+        .where("experimentId")
+        .equals(fresh.entry.id)
+        .count(),
+    ).toBe(13 * session.checkpoint.population.length);
     const map = new Map(restored.lineage!.nodes.map((n) => [n.genome.id, n]));
     for (const [id, g] of ancestors)
       expect(reconstructGenome(id, (k) => map.get(k))).toEqual(g);
@@ -79,7 +92,7 @@ test("retains unsuccessful births, sparse patches and original trials across ful
       e.advance(10000);
       expect(e.result()).toEqual(r.replay!.results[0]);
     }
-    const next = nextFixture({ ...restored, lineage: undefined });
+    const next = nextFixture(restored);
     await repo.save(fresh.entry.id, 0, next.session, next.commit);
     expect(
       (await repo.exportLineage(fresh.entry.id, 1)).generations,
@@ -206,6 +219,77 @@ test("M7 normalized full-weight records migrate lazily without rewriting the che
       ),
     );
     expect(decode(before.payload)).toBeDefined();
+  } finally {
+    await repo.db.delete();
+  }
+});
+test("ancestry and child navigation use bounded pages over retained records", async () => {
+  const repo = new IndexedRepository(`lineage-pages-${crypto.randomUUID()}`);
+  try {
+    const s = savedFixture("pages"),
+      root = s.checkpoint.population[0],
+      nodes = new Map<string, LineageNode>(
+        s.checkpoint.population.map((g) => [g.id, retainGenome(g)]),
+      );
+    let parent = root;
+    for (let g = 1; g <= 70; g++) {
+      const child: Genome = {
+        ...structuredClone(parent),
+        id: `chain-${g}`,
+        birthGeneration: g,
+        origin: "mutation",
+        parentIds: [parent.id],
+        mutation: { seed: "a".repeat(64), changes: [] },
+      };
+      nodes.set(
+        child.id,
+        retainGenome(child, { genome: parent, node: nodes.get(parent.id)! }),
+      );
+      parent = child;
+    }
+    for (let g = 1; g <= 65; g++) {
+      const child: Genome = {
+        ...structuredClone(root),
+        id: `sibling-${g}`,
+        birthGeneration: g,
+        origin: "mutation",
+        parentIds: [root.id],
+        mutation: { seed: "b".repeat(64), changes: [] },
+      };
+      nodes.set(
+        child.id,
+        retainGenome(child, { genome: root, node: nodes.get(root.id)! }),
+      );
+    }
+    s.checkpoint.generation = 70;
+    s.lineage = {
+      version: 1,
+      fromGeneration: 70,
+      nodes: [...nodes.values()],
+      generations: [],
+    };
+    const h = await repo.create(s),
+      first = await repo.lineage(h.entry.id, parent.id);
+    expect(first.ancestors).toHaveLength(30);
+    expect(first.nextAncestor).toBe("chain-39");
+    const second = await repo.lineage(h.entry.id, parent.id, {
+      ancestorStart: first.nextAncestor!,
+    });
+    expect(second.ancestors).toHaveLength(30);
+    expect(second.nextAncestor).toBe("chain-9");
+    const children = await repo.lineage(h.entry.id, root.id);
+    expect(children.children).toHaveLength(20);
+    expect(children.childrenCount).toBe(66);
+    const later = await repo.lineage(h.entry.id, root.id, {
+      childrenOffset: 20,
+    });
+    expect(later.children).toHaveLength(20);
+    expect(
+      later.children.some((c) => children.children.some((g) => g.id === c.id)),
+    ).toBe(false);
+    await expect(
+      repo.lineage(h.entry.id, root.id, { childrenOffset: -1 }),
+    ).rejects.toThrow(/page/);
   } finally {
     await repo.db.delete();
   }

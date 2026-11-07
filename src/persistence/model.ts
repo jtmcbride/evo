@@ -13,7 +13,12 @@ import { hash, parameterHash } from "../core/canonical";
 import { validateScenario } from "../core/world/scenario";
 import { comparisonId, type SensorComparison } from "../core/comparison";
 import { restoreEpisode, validateSensorMask } from "../core/episode";
-import { validateLineage, type LineageBundle } from "../core/lineage";
+import {
+  validateLineage,
+  reconstructGenome,
+  contentHash,
+  type LineageBundle,
+} from "../core/lineage";
 export interface Settings {
   name: string;
   preset: "open" | "obstacles";
@@ -579,6 +584,19 @@ export function parseSession(value: unknown): SavedSession {
     throw new Error("Duplicate comparison");
   validateCheckpoint(s.checkpoint);
   if (s.lineage) validateLineage(s.lineage, s.checkpoint);
+  if (s.lineage) {
+    const nodes = new Map(s.lineage.nodes.map((n) => [n.genome.id, n]));
+    const references = [
+      ...s.replays.map((r) => r.genome),
+      ...(s.bookmark ? [s.bookmark.genome] : []),
+    ];
+    for (const g of references)
+      if (
+        contentHash(reconstructGenome(g.id, (id) => nodes.get(id))) !==
+        contentHash(g)
+      )
+        throw new Error("Lineage replay reference mismatch");
+  }
   s.checkpoint.population.forEach(validateGenome);
   const c = s.checkpoint,
     def = c.definition,
@@ -637,6 +655,8 @@ export function parseSession(value: unknown): SavedSession {
     });
   }
   if (s.bookmark) {
+    if (s.bookmark.lineageId && s.bookmark.lineageId !== s.bookmark.genome.id)
+      throw new Error("Invalid lineage bookmark reference");
     validateGenome(s.bookmark.genome);
     if (
       s.bookmark.genome.birthGeneration > s.bookmark.generation ||

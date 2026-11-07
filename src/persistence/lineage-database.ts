@@ -36,6 +36,13 @@ export async function writeGeneration(
   r: GenerationRecord,
   commitId: string,
 ) {
+  await db.memberships.bulkPut(
+    r.populationIds.map((genomeId, slot) => ({
+      experimentId: id,
+      key: `${r.generation}:${slot}`,
+      data: { generation: r.generation, slot, genomeId },
+    })),
+  );
   await db.generations.put({
     experimentId: id,
     key: String(r.generation),
@@ -83,10 +90,31 @@ export async function writeGeneration(
 }
 export class LineageStorage {
   constructor(private db: LabDatabase) {}
-  private decode(row: LineageRow): LineageNode {
+  private async decode(row: LineageRow): Promise<LineageNode> {
     if (hash(row.payload) !== row.checksum)
       throw new Error("Saved lineage checksum mismatch");
     const node = decode(row.payload) as LineageNode;
+    if (node.storage.kind === "full" && "parameterHash" in node.storage) {
+      const storage = node.storage as {
+        kind: "full";
+        depth: 0;
+        parameterHash: string;
+      };
+      if (
+        storage.parameterHash !== node.genome.parameterHash ||
+        Object.keys(storage).some(
+          (k) => !["kind", "depth", "parameterHash"].includes(k),
+        )
+      )
+        throw new Error("Invalid lineage anchor reference");
+      const blob = await this.db.parameters.get(storage.parameterHash);
+      if (!blob) throw new Error("Missing lineage anchor parameters");
+      node.storage = {
+        kind: "full",
+        depth: storage.depth,
+        parameters: blob.values,
+      };
+    }
     validateNode(node);
     if (
       node.genome.id !== row.key ||
@@ -101,7 +129,23 @@ export class LineageStorage {
     return row ? this.decode(row) : undefined;
   }
   private async put(id: string, node: LineageNode) {
-    const payload = encode(node);
+    if (node.storage.kind === "full")
+      await this.db.parameters.put({
+        hash: node.genome.parameterHash,
+        values: node.storage.parameters,
+      });
+    const payload = encode(
+      node.storage.kind === "full"
+        ? {
+            ...node,
+            storage: {
+              kind: "full",
+              depth: 0,
+              parameterHash: node.genome.parameterHash,
+            },
+          }
+        : node,
+    );
     await this.db.lineageNodes.add({
       experimentId: id,
       key: node.genome.id,
@@ -186,6 +230,13 @@ export class LineageStorage {
     if (!(await this.db.lineageMeta.get(id))) {
       const bundle = initialLineage(session);
       for (const node of bundle.nodes) await this.put(id, node);
+      await this.db.genomes.bulkPut(
+        bundle.nodes.map((node) => ({
+          experimentId: id,
+          key: node.genome.id,
+          data: node.genome,
+        })),
+      );
       for (const { commitId, ...r } of bundle.generations)
         await writeGeneration(this.db, id, r, commitId);
       await this.db.lineageMeta.add({
@@ -193,8 +244,7 @@ export class LineageStorage {
         fromGeneration: bundle.fromGeneration,
       });
     }
-    const parents = new Map(previous?.population.map((g) => [g.id, g]) ?? []),
-      full = new Set<string>();
+    const parents = new Map(previous?.population.map((g) => [g.id, g]) ?? []);
     for (const g of sessionGenomes(session)) {
       let node = await this.node(id, g.id);
       if (node) {
@@ -211,9 +261,7 @@ export class LineageStorage {
         );
         await this.put(id, node);
       }
-      if (node.storage.kind === "full") full.add(g.id);
     }
-    return full;
   }
   private async genome(id: string, key: string) {
     const nodes = new Map<string, LineageNode>();
@@ -337,13 +385,41 @@ export class LineageStorage {
       const birth = await this.generation(id, genome.birthGeneration),
         slot = birth?.populationIds.indexOf(genomeId) ?? -1;
       const meta = await this.db.lineageMeta.get(id);
+      let replay =
+        birth && slot >= 0
+          ? {
+              generation: birth.generation,
+              genome,
+              scenarios: birth.scenarios,
+              results: birth.trials[slot],
+            }
+          : null;
+      if (!replay && genome.birthGeneration < meta!.fromGeneration) {
+        const head = await this.db.experiments.get(id),
+          row = head
+            ? await this.db.checkpoints.get([id, head.generation])
+            : undefined;
+        if (
+          !head ||
+          !row ||
+          hash(row.payload) !== head.checksum ||
+          row.checksum !== head.checksum
+        )
+          throw new Error("Saved checkpoint checksum mismatch");
+        const session = parseSession(decode(row.payload));
+        replay = session.replays.find((r) => r.genome.id === genomeId) ?? null;
+        if (replay && contentHash(replay.genome) !== contentHash(genome))
+          throw new Error("Retained replay lineage mismatch");
+      }
       return {
         genome,
         parent,
         ancestors,
         nextAncestor: cursor ?? null,
         missingAncestor,
-        children: rows.map((row) => this.decode(row).genome),
+        children: await Promise.all(
+          rows.map(async (row) => (await this.decode(row)).genome),
+        ),
         childrenOffset: offset,
         childrenCount,
         fromGeneration: meta!.fromGeneration,
@@ -351,15 +427,7 @@ export class LineageStorage {
           .where("experimentId")
           .equals(id)
           .count(),
-        replay:
-          birth && slot >= 0
-            ? {
-                generation: birth.generation,
-                genome,
-                scenarios: birth.scenarios,
-                results: birth.trials[slot],
-              }
-            : null,
+        replay,
       };
     });
   }
@@ -384,12 +452,14 @@ export class LineageStorage {
         const bundle: LineageBundle = {
           version: 1,
           fromGeneration: meta!.fromGeneration,
-          nodes: (
-            await this.db.lineageNodes
-              .where("experimentId")
-              .equals(id)
-              .toArray()
-          ).map((row) => this.decode(row)),
+          nodes: await Promise.all(
+            (
+              await this.db.lineageNodes
+                .where("experimentId")
+                .equals(id)
+                .toArray()
+            ).map((row) => this.decode(row)),
+          ),
           generations: [],
         };
         for (let g = bundle.fromGeneration; g < entry.generation; g++) {

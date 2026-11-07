@@ -216,6 +216,15 @@ export function validateLineage(
     )
       throw new Error("Missing or invalid ancestry");
     reconstructGenome(n.genome.id, (id) => nodes.get(id));
+    if (parent && n.genome.mutation) {
+      const parameters = reconstructGenome(parent.genome.id, (id) =>
+        nodes.get(id),
+      ).parameters;
+      for (const change of n.genome.mutation.changes)
+        parameters[change.index] = change.value;
+      if (parameterHash(parameters) !== n.genome.parameterHash)
+        throw new Error("Lineage mutation patch omits a parameter change");
+    }
   }
   for (const g of checkpoint.population) {
     if (

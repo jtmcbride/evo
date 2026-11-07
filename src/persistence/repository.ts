@@ -139,8 +139,9 @@ export class MemoryRepository implements Repository {
     const session = parseSession(value),
       id = crypto.randomUUID(),
       h = { entry: entryFor(id, 0, session), session };
+    const lineage = initialLineage(session);
     this.data.set(id, structuredClone(h));
-    this.histories.set(id, initialLineage(session));
+    this.histories.set(id, lineage);
     this.comparisons.set(id, structuredClone(session.comparisons ?? []));
     this.activeId = id;
     return structuredClone(h);
@@ -152,7 +153,7 @@ export class MemoryRepository implements Repository {
     commit?: GenerationCommit,
     interrupted = false,
   ) {
-    const session = parseSession(value);
+    const session = parseSession({ ...value, lineage: undefined });
     if (commit) validateCommit(commit, session);
     const old = await this.load(id);
     if (
@@ -162,11 +163,9 @@ export class MemoryRepository implements Repository {
     )
       return old;
     if (old.entry.revision !== revision) throw new RevisionConflict();
-    if (commit)
-      this.histories.set(
-        id,
-        appendLineage(this.histories.get(id)!, old.session.checkpoint, commit),
-      );
+    const lineage = commit
+      ? appendLineage(this.histories.get(id)!, old.session.checkpoint, commit)
+      : this.histories.get(id)!;
     this.comparisons.set(
       id,
       mergeComparisons(
@@ -179,6 +178,7 @@ export class MemoryRepository implements Repository {
       session,
     };
     this.data.set(id, structuredClone(h));
+    this.histories.set(id, lineage);
     return structuredClone(h);
   }
   async markRunning(id: string, revision: number) {
@@ -201,7 +201,13 @@ export class MemoryRepository implements Repository {
   async lineage(id: string, genomeId: string, query?: LineageQuery) {
     const bundle = this.histories.get(id);
     if (!bundle) throw new Error("Saved lineage not found");
-    return lineageView(bundle, genomeId, query);
+    const view = lineageView(bundle, genomeId, query);
+    view.replay ??= structuredClone(
+      this.data
+        .get(id)!
+        .session.replays.find((r) => r.genome.id === genomeId) ?? null,
+    );
+    return view;
   }
   async exportLineage(id: string, revision: number) {
     if ((await this.load(id)).entry.revision !== revision)

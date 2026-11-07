@@ -104,6 +104,34 @@ test("patch capture rejects an omitted change and reconstruction returns owned b
   expect(parent.parameters[0]).not.toBe(42);
   expect(reconstructGenome(parent.id, () => anchor)).toEqual(parent);
 });
+test("materializes an anchor at the depth limit even when birth generations skip periodic anchors", () => {
+  let parent = initial().population[0];
+  const nodes = new Map<string, LineageNode>([
+    [parent.id, retainGenome(parent)],
+  ]);
+  let materialized = false;
+  for (let birth = 1; birth <= 22; birth++) {
+    if (birth % 10 === 0) continue;
+    const child = {
+      ...structuredClone(parent),
+      id: `gap-${birth}`,
+      birthGeneration: birth,
+      origin: "mutation" as const,
+      parentIds: [parent.id],
+      mutation: { seed: "a".repeat(64), changes: [] },
+    };
+    const old = nodes.get(parent.id)!,
+      node = retainGenome(child, { genome: parent, node: old });
+    if (old.storage.depth === 16) {
+      expect(node.storage.kind).toBe("full");
+      materialized = true;
+    }
+    nodes.set(child.id, node);
+    expect(reconstructGenome(child.id, (id) => nodes.get(id))).toEqual(child);
+    parent = child;
+  }
+  expect(materialized).toBe(true);
+});
 test("parent and child run every shared scenario from tick zero without affecting source genomes", () => {
   const cp = initial(),
     next = reproduce(cp, [0, 1, 2, 3]),
