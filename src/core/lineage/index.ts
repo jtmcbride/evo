@@ -259,7 +259,11 @@ export function validateLineage(
       )
     )
       throw new Error("Invalid lineage generation");
-    [...r.scenarios, ...r.validationScenarios].forEach(validateScenario);
+    [...r.scenarios, ...r.validationScenarios].forEach((s) => {
+      validateScenario(s);
+      if (contentHash(s.config) !== contentHash(checkpoint.definition.world))
+        throw new Error("Lineage scenario configuration mismatch");
+    });
     const check = (
       result: GenerationRecord["validation"][number],
       genomeId: string,
@@ -309,5 +313,31 @@ export function validateLineage(
     r.validation.forEach((t, trial) =>
       check(t, r.championId, r.validationScenarios[trial].hash),
     );
+    const { commitId, ...record } = r;
+    const nextIds =
+      bundle.generations[index + 1]?.populationIds ??
+      checkpoint.population.map((g) => g.id);
+    const population = nextIds.map((id) => {
+      const n = nodes.get(id);
+      if (!n) throw new Error("Missing next-generation lineage");
+      return n.genome;
+    });
+    if (
+      hash({
+        record,
+        nextCheckpoint: {
+          ...checkpoint,
+          generation: r.generation + 1,
+          population,
+          lastCommitId: null,
+        },
+      }) !== commitId
+    )
+      throw new Error("Lineage generation commit mismatch");
   });
+  if (
+    bundle.generations.length &&
+    bundle.generations.at(-1)!.commitId !== checkpoint.lastCommitId
+  )
+    throw new Error("Lineage head does not match population");
 }

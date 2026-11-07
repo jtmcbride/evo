@@ -24,17 +24,17 @@ function parameterBytes(p: Float32Array) {
 const manifestSchema = z
   .object({
     format: z.literal("evolution-lab"),
-    formatVersion: z.union([z.literal(1), z.literal(2)]),
+    formatVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     engineVersion: z.string().max(100),
-    kind: z.literal("checkpoint"),
-    ancestry: z.literal("partial"),
+    kind: z.enum(["checkpoint", "lineage"]),
+    ancestry: z.enum(["partial", "complete"]),
     entries: z
       .array(
         z
           .object({
             path: z.string().max(128),
             sha256: z.string().regex(/^[a-f0-9]{64}$/),
-            bytes: z.number().int().nonnegative().max(ARCHIVE_LIMITS.session),
+            bytes: z.number().int().nonnegative().max(ARCHIVE_LIMITS.expanded),
           })
           .strict(),
       )
@@ -52,6 +52,7 @@ export function createArchive(value: SavedSession): Uint8Array {
   };
   const data = {
     ...session,
+    lineage: undefined,
     checkpoint: {
       ...session.checkpoint,
       population: session.checkpoint.population.map(external),
@@ -77,13 +78,48 @@ export function createArchive(value: SavedSession): Uint8Array {
       };
     }),
   };
+  if (session.lineage) {
+    const blocks: Uint8Array[] = [],
+      offsets = new Map<string, number>();
+    const lineage = {
+      ...session.lineage,
+      nodes: session.lineage.nodes.map((node) => {
+        if (node.storage.kind !== "full") return node;
+        const key = node.genome.parameterHash;
+        if (files[parameterPath(key)])
+          return {
+            ...node,
+            storage: { ...node.storage, parameters: { $parameter: key } },
+          };
+        let offset = offsets.get(key);
+        if (offset === undefined) {
+          offset = blocks.length * 1112;
+          offsets.set(key, offset);
+          blocks.push(parameterBytes(node.storage.parameters));
+        }
+        return {
+          ...node,
+          storage: {
+            ...node.storage,
+            parameters: { $lineageParameter: key, offset },
+          },
+        };
+      }),
+    };
+    files["lineage.json"] = strToU8(encode(lineage));
+    if (blocks.length) {
+      const bytes = new Uint8Array(blocks.length * 1112);
+      blocks.forEach((b, i) => bytes.set(b, i * 1112));
+      files["lineage-parameters.f32"] = bytes;
+    }
+  }
   files["session.json"] = strToU8(encode(data));
   const manifest = {
     format: "evolution-lab",
-    formatVersion: 2,
+    formatVersion: session.lineage ? 3 : 2,
     engineVersion: ENGINE_VERSION,
-    kind: "checkpoint",
-    ancestry: "partial",
+    kind: session.lineage ? "lineage" : "checkpoint",
+    ancestry: session.lineage?.fromGeneration === 0 ? "complete" : "partial",
     entries: Object.entries(files).map(([path, bytes]) => ({
       path,
       sha256: digest(bytes),
@@ -92,6 +128,7 @@ export function createArchive(value: SavedSession): Uint8Array {
   };
   files["manifest.json"] = strToU8(JSON.stringify(manifest));
   if (
+    Object.keys(files).length > ARCHIVE_LIMITS.entries ||
     files["session.json"].length > ARCHIVE_LIMITS.session ||
     Object.values(files).reduce((s, b) => s + b.length, 0) >
       ARCHIVE_LIMITS.expanded
@@ -137,6 +174,8 @@ function unpack(bytes: Uint8Array) {
       !(
         name === "manifest.json" ||
         name === "session.json" ||
+        name === "lineage.json" ||
+        name === "lineage-parameters.f32" ||
         /^parameters\/[a-f0-9]{64}\.f32$/.test(name)
       )
     ) {
@@ -150,7 +189,9 @@ function unpack(bytes: Uint8Array) {
         ? ARCHIVE_LIMITS.manifest
         : name === "session.json"
           ? ARCHIVE_LIMITS.session
-          : 1112;
+          : name === "lineage.json" || name === "lineage-parameters.f32"
+            ? ARCHIVE_LIMITS.expanded
+            : 1112;
     if (file.originalSize !== undefined && file.originalSize > limit) {
       error = new Error("Archive entry exceeds its size limit");
       file.terminate();
@@ -213,6 +254,12 @@ export function readArchive(bytes: Uint8Array): SavedSession {
     );
   if (manifest.engineVersion !== ENGINE_VERSION)
     throw new Error(`Unsupported engine version: ${manifest.engineVersion}`);
+  if (
+    manifest.formatVersion < 3
+      ? manifest.kind !== "checkpoint" || manifest.ancestry !== "partial"
+      : manifest.kind !== "lineage"
+  )
+    throw new Error("Invalid archive kind or ancestry version");
   const names = new Set(manifest.entries.map((e) => e.path));
   if (
     names.size !== manifest.entries.length ||
@@ -226,35 +273,75 @@ export function readArchive(bytes: Uint8Array): SavedSession {
       throw new Error(`Archive checksum mismatch: ${entry.path}`);
   }
   const used = new Set(["manifest.json", "session.json"]);
-  const raw = JSON.parse(
-    strFromU8(files.get("session.json")!),
-    (_key, value) => {
-      if (value && typeof value === "object" && "$parameter" in value) {
-        if (
-          Object.keys(value).length !== 1 ||
-          typeof value.$parameter !== "string" ||
-          !/^[a-f0-9]{64}$/.test(value.$parameter)
-        )
-          throw new Error("Invalid parameter reference");
-        const path = parameterPath(value.$parameter),
-          data = files.get(path);
-        if (!data || data.length !== 1112)
-          throw new Error("Missing or truncated parameter data");
-        used.add(path);
-        const view = new DataView(
-            data.buffer,
-            data.byteOffset,
-            data.byteLength,
-          ),
-          p = new Float32Array(278);
-        for (let i = 0; i < 278; i++) p[i] = view.getFloat32(i * 4, true);
-        if (!p.every(Number.isFinite) || parameterHash(p) !== value.$parameter)
-          throw new Error("Invalid parameter checksum");
-        return { $evo: "float32le", bytes: Array.from(data) };
-      }
-      return value;
-    },
-  );
+  const offsets = new Set<number>();
+  const revive = (_key: string, value: unknown): unknown => {
+    if (
+      value &&
+      typeof value === "object" &&
+      ("$parameter" in value || "$lineageParameter" in value)
+    ) {
+      const reference = value as {
+        $parameter?: string;
+        $lineageParameter?: string;
+        offset?: number;
+      };
+      const aggregate = "$lineageParameter" in value;
+      const key = aggregate
+        ? reference.$lineageParameter
+        : reference.$parameter;
+      if (
+        Object.keys(value).length !== (aggregate ? 2 : 1) ||
+        typeof key !== "string" ||
+        !/^[a-f0-9]{64}$/.test(key) ||
+        (aggregate &&
+          (manifest.formatVersion !== 3 ||
+            !Number.isInteger(reference.offset) ||
+            reference.offset! < 0 ||
+            reference.offset! % 1112 !== 0))
+      )
+        throw new Error("Invalid parameter reference");
+      const path = aggregate ? "lineage-parameters.f32" : parameterPath(key),
+        file = files.get(path);
+      const data =
+        aggregate && file
+          ? file.subarray(reference.offset!, reference.offset! + 1112)
+          : file;
+      if (
+        !data ||
+        data.length !== 1112 ||
+        (aggregate && file!.length % 1112 !== 0)
+      )
+        throw new Error("Missing or truncated parameter data");
+      used.add(path);
+      if (aggregate) offsets.add(reference.offset!);
+      const view = new DataView(data.buffer, data.byteOffset, data.byteLength),
+        p = new Float32Array(278);
+      for (let i = 0; i < 278; i++) p[i] = view.getFloat32(i * 4, true);
+      if (!p.every(Number.isFinite) || parameterHash(p) !== key)
+        throw new Error("Invalid parameter checksum");
+      return { $evo: "float32le", bytes: Array.from(data) };
+    }
+    return value;
+  };
+  const raw = JSON.parse(strFromU8(files.get("session.json")!), revive);
+  if ("lineage" in raw)
+    throw new Error("Lineage must use the version-three archive record");
+  if (manifest.kind === "lineage") {
+    const lineage = files.get("lineage.json");
+    if (!lineage) throw new Error("Missing lineage archive record");
+    used.add("lineage.json");
+    raw.lineage = JSON.parse(strFromU8(lineage), revive);
+    if (
+      (raw.lineage.fromGeneration === 0 ? "complete" : "partial") !==
+      manifest.ancestry
+    )
+      throw new Error(
+        "Archive ancestry claim does not match retained coverage",
+      );
+  }
+  const aggregate = files.get("lineage-parameters.f32");
+  if (aggregate && offsets.size * 1112 !== aggregate.length)
+    throw new Error("Unreferenced lineage parameters");
   if (used.size !== files.size)
     throw new Error("Archive contains unreferenced records");
   const session = parseSession(decode(JSON.stringify(raw)));

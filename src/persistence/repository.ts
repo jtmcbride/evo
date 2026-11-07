@@ -9,6 +9,14 @@ import {
   type SavedHandle,
 } from "./model";
 import type { SensorComparison } from "../core/comparison";
+import type { LineageBundle } from "../core/lineage";
+import {
+  initialLineage,
+  appendLineage,
+  lineageView,
+  type LineageQuery,
+  type LineageView,
+} from "./lineage";
 export function mergeComparisons(
   a: SensorComparison[] = [],
   b: SensorComparison[] = [],
@@ -49,6 +57,12 @@ export interface Repository {
   ): Promise<SavedHandle>;
   markRunning(id: string, revision: number): Promise<void>;
   saveComparison(id: string, comparison: SensorComparison): Promise<void>;
+  lineage(
+    id: string,
+    genomeId: string,
+    query?: LineageQuery,
+  ): Promise<LineageView>;
+  exportLineage(id: string, revision: number): Promise<LineageBundle>;
   close(): void;
 }
 export function validateCommit(
@@ -92,6 +106,7 @@ export class MemoryRepository implements Repository {
   private data = new Map<string, SavedHandle>();
   private activeId: string | null = null;
   private comparisons = new Map<string, SensorComparison[]>();
+  private histories = new Map<string, LineageBundle>();
   async list() {
     return structuredClone(
       Array.from(this.data.values(), (v) => v.entry).sort(
@@ -125,6 +140,7 @@ export class MemoryRepository implements Repository {
       id = crypto.randomUUID(),
       h = { entry: entryFor(id, 0, session), session };
     this.data.set(id, structuredClone(h));
+    this.histories.set(id, initialLineage(session));
     this.comparisons.set(id, structuredClone(session.comparisons ?? []));
     this.activeId = id;
     return structuredClone(h);
@@ -146,6 +162,11 @@ export class MemoryRepository implements Repository {
     )
       return old;
     if (old.entry.revision !== revision) throw new RevisionConflict();
+    if (commit)
+      this.histories.set(
+        id,
+        appendLineage(this.histories.get(id)!, old.session.checkpoint, commit),
+      );
     this.comparisons.set(
       id,
       mergeComparisons(
@@ -176,6 +197,18 @@ export class MemoryRepository implements Repository {
         mergeComparisons(current.session.comparisons, [c]),
       ),
     );
+  }
+  async lineage(id: string, genomeId: string, query?: LineageQuery) {
+    const bundle = this.histories.get(id);
+    if (!bundle) throw new Error("Saved lineage not found");
+    return lineageView(bundle, genomeId, query);
+  }
+  async exportLineage(id: string, revision: number) {
+    if ((await this.load(id)).entry.revision !== revision)
+      throw new RevisionConflict();
+    const bundle = this.histories.get(id);
+    if (!bundle) throw new Error("Saved lineage not found");
+    return structuredClone(bundle);
   }
   close() {}
 }

@@ -18,6 +18,13 @@ import {
   mergeComparisons,
 } from "./repository";
 import type { SensorComparison } from "../core/comparison";
+import {
+  LineageStorage,
+  writeGeneration,
+  type LineageRow,
+} from "./lineage-database";
+import type { LineageQuery } from "./lineage";
+import type { ExperimentCheckpoint } from "../core/evolution";
 interface CheckpointRow {
   experimentId: string;
   generation: number;
@@ -30,6 +37,8 @@ interface DataRow {
   data: unknown;
 }
 export class LabDatabase extends Dexie {
+  lineageNodes!: Table<LineageRow, [string, string]>;
+  lineageMeta!: Table<{ experimentId: string; fromGeneration: number }, string>;
   experiments!: Table<SavedEntry, string>;
   checkpoints!: Table<CheckpointRow, [string, number]>;
   genomes!: Table<DataRow, [string, string]>;
@@ -59,6 +68,11 @@ export class LabDatabase extends Dexie {
       meta: "key",
     });
     this.version(2).stores({ comparisons: "[experimentId+key],experimentId" });
+    this.version(3).stores({
+      lineageNodes:
+        "[experimentId+key],experimentId,[experimentId+parentId+birthGeneration+key]",
+      lineageMeta: "experimentId",
+    });
   }
 }
 function prepareRows(
@@ -85,7 +99,7 @@ function prepareRows(
     ])
       scenarios.set(s.hash, s);
   // Numerical checkpoint payloads stay small; comparison records have independent checksums.
-  const payload = encode({ ...session, comparisons: [] }),
+  const payload = encode({ ...session, comparisons: [], lineage: undefined }),
     trials: DataRow[] = [],
     evaluations: DataRow[] = [];
   const result = (data: unknown, key: string) =>
@@ -131,8 +145,10 @@ function prepareRows(
 }
 export class IndexedRepository implements Repository {
   readonly db: LabDatabase;
+  private lineageStorage: LineageStorage;
   constructor(name?: string) {
     this.db = new LabDatabase(name);
+    this.lineageStorage = new LineageStorage(this.db);
   }
   async list() {
     return this.db.experiments.orderBy("updatedAt").reverse().toArray();
@@ -187,7 +203,11 @@ export class IndexedRepository implements Repository {
     const session = parseSession(value),
       id = crypto.randomUUID(),
       rows = prepareRows(id, session),
-      entry = entryFor(id, 0, { ...session, comparisons: [] });
+      entry = entryFor(id, 0, {
+        ...session,
+        comparisons: [],
+        lineage: undefined,
+      });
     await this.db.transaction("rw", this.db.tables, async () => {
       await this.writeRows(id, session, rows);
       await this.db.experiments.add(entry);
@@ -204,6 +224,7 @@ export class IndexedRepository implements Repository {
   ) {
     const session = parseSession(value);
     if (commit) validateCommit(commit, session);
+    await this.lineageStorage.ensure(id);
     const rows = prepareRows(id, session, commit);
     return this.db.transaction("rw", this.db.tables, async () => {
       const previous = await this.db.experiments.get(id);
@@ -223,27 +244,21 @@ export class IndexedRepository implements Repository {
         previous.generation + (commit ? 1 : 0)
       )
         throw new Error("Invalid saved generation transition");
-      await this.writeRows(id, session, rows);
+      const oldRow = await this.db.checkpoints.get([id, previous.generation]);
+      if (!oldRow) throw new Error("Saved checkpoint is missing");
+      await this.writeRows(
+        id,
+        session,
+        rows,
+        this.decode(oldRow, previous).session.checkpoint,
+      );
       if (commit) {
-        const r = commit.record;
-        await this.db.generations.put({
-          experimentId: id,
-          key: String(r.generation),
-          data: {
-            commitId: commit.id,
-            generation: r.generation,
-            populationIds: r.populationIds,
-            totals: r.totals,
-            championId: r.championId,
-            scenarioHashes: r.scenarios.map((s) => s.hash),
-            validationHashes: r.validationScenarios.map((s) => s.hash),
-          },
-        });
+        await writeGeneration(this.db, id, commit.record, commit.id);
       }
       const entry = entryFor(
         id,
         revision + 1,
-        { ...session, comparisons: [] },
+        { ...session, comparisons: [], lineage: undefined },
         interrupted,
       );
       await this.db.experiments.put(entry);
@@ -262,14 +277,18 @@ export class IndexedRepository implements Repository {
     id: string,
     session: SavedSession,
     rows: ReturnType<typeof prepareRows>,
+    previous?: ExperimentCheckpoint,
   ) {
+    const full = await this.lineageStorage.capture(id, session, previous);
     for (const c of session.comparisons ?? [])
       await this.writeComparison(id, c);
     await this.db.parameters.bulkPut(
-      rows.genomes.map((g) => ({
-        hash: (g.data as Genome).parameterHash,
-        values: g.parameters,
-      })),
+      rows.genomes
+        .filter((g) => full.has(g.key))
+        .map((g) => ({
+          hash: (g.data as Genome).parameterHash,
+          values: g.parameters,
+        })),
     );
     await this.db.genomes.bulkPut(
       rows.genomes.map(({ parameters, ...g }) => {
@@ -303,6 +322,12 @@ export class IndexedRepository implements Repository {
       if (!entry || entry.revision !== revision) throw new RevisionConflict();
       await this.db.experiments.update(id, { interrupted: true });
     });
+  }
+  lineage(id: string, genomeId: string, query?: LineageQuery) {
+    return this.lineageStorage.read(id, genomeId, query);
+  }
+  exportLineage(id: string, revision: number) {
+    return this.lineageStorage.export(id, revision);
   }
   private async readComparisons(id: string) {
     const rows = await this.db.comparisons

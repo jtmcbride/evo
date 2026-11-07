@@ -13,6 +13,7 @@ import { hash, parameterHash } from "../core/canonical";
 import { validateScenario } from "../core/world/scenario";
 import { comparisonId, type SensorComparison } from "../core/comparison";
 import { restoreEpisode, validateSensorMask } from "../core/episode";
+import { validateLineage, type LineageBundle } from "../core/lineage";
 export interface Settings {
   name: string;
   preset: "open" | "obstacles";
@@ -60,6 +61,7 @@ export interface RuntimeFingerprint {
   platform: string;
 }
 export interface Bookmark {
+  lineageId?: string;
   genome: Genome;
   generation: number;
   label: string;
@@ -79,6 +81,7 @@ export interface SavedSession {
   replays: Replay[];
   bookmark: Bookmark | null;
   comparisons?: SensorComparison[];
+  lineage?: LineageBundle;
   provenance: {
     created: RuntimeFingerprint;
     current: RuntimeFingerprint;
@@ -404,6 +407,7 @@ const schema = z
       .max(51),
     bookmark: z
       .object({
+        lineageId: str.optional(),
         genome,
         generation: integer,
         label: z.string().max(128),
@@ -416,6 +420,7 @@ const schema = z
       .strict()
       .nullable(),
     comparisons: z.array(comparison).max(32).default([]),
+    lineage: z.custom<LineageBundle>().optional(),
     provenance: z
       .object({
         created: runtime,
@@ -573,6 +578,7 @@ export function parseSession(value: unknown): SavedSession {
   if (new Set(s.comparisons.map((c) => c.id)).size !== s.comparisons.length)
     throw new Error("Duplicate comparison");
   validateCheckpoint(s.checkpoint);
+  if (s.lineage) validateLineage(s.lineage, s.checkpoint);
   s.checkpoint.population.forEach(validateGenome);
   const c = s.checkpoint,
     def = c.definition,
