@@ -61,6 +61,14 @@ export class ExperimentRunner {
   get phase() {
     return this.status;
   }
+  progress() {
+    return {
+      generation: this.current.generation,
+      completedTrials: this.jobIndex,
+      totalTrials: this.jobs.length,
+      activeTick: this.active?.inspect().tick ?? null,
+    };
+  }
   checkpoint(): ExperimentCheckpoint {
     return structuredClone(this.current);
   }
