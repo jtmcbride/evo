@@ -373,7 +373,7 @@ export class WorkbenchStore {
       notice: session.provenance.changes.length
         ? "This checkpoint has been continued in a different browser runtime; exact cross-runtime replay is not guaranteed."
         : handle.entry.interrupted
-          ? `Training stopped before the next save. Recovered population ${cp.generation}; its unfinished generation will rerun.`
+          ? `Recovered population ${cp.generation} after training stopped. Any work beyond this saved population will rerun.`
           : null,
     });
     if (session.bookmark) {

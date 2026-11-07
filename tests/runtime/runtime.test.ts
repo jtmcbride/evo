@@ -286,3 +286,32 @@ test("idle playback publishes final and replacement status without waiting for a
     h.events.filter((e) => e.type === "status").at(-1)?.status.seeking,
   ).toBe(false);
 });
+
+test("completion and pause flush dirty frames inside the publication rate limit", () => {
+  for (const terminal of [false, true]) {
+    const h = setup();
+    h.send({ type: "openPlayback", playbackId: "p", definition: h.playback });
+    const first = h.events.find((e) => e.type === "snapshot")!;
+    if (first.type !== "snapshot") throw new Error("Missing initial frame");
+    h.send({ type: "snapshotReceived", frameId: first.frameId });
+    h.send({
+      type: "setPlaybackState",
+      playbackId: "p",
+      playing: true,
+      speed: terminal ? 64 : 1,
+    });
+    h.elapse(terminal ? 48 : 40);
+    h.runtime.pump();
+    if (!terminal)
+      h.send({
+        type: "setPlaybackState",
+        playbackId: "p",
+        playing: false,
+        speed: 1,
+      });
+    const frames = h.events.filter((e) => e.type === "snapshot");
+    expect(frames).toHaveLength(2);
+    expect(frames[1].snapshot.state.tick).toBe(terminal ? 90 : 1);
+    expect(h.runtime.needsWork).toBe(false);
+  }
+});

@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { readArchive } from "../../src/persistence/archive";
 import { test, expect, type Page } from "@playwright/test";
 async function study(
   page: Page,
@@ -87,7 +89,7 @@ test("an interrupted generation recovers paused at the previous durable populati
     "Saved population 0",
   );
   await expect(page.locator(".storage-notice")).toContainText(
-    "unfinished generation will rerun",
+    "Any work beyond this saved population will rerun",
   );
   await expect(
     page.getByRole("button", { name: "Train 10 generations", exact: true }),
@@ -161,13 +163,11 @@ test("an invalid import leaves the current experiment and saved library intact",
   const selected = await page
     .getByLabel("Saved experiments", { exact: true })
     .inputValue();
-  await page
-    .getByLabel("Checkpoint archive", { exact: true })
-    .setInputFiles({
-      name: "broken.evolab",
-      mimeType: "application/zip",
-      buffer: Buffer.from("not a checkpoint"),
-    });
+  await page.getByLabel("Checkpoint archive", { exact: true }).setInputFiles({
+    name: "broken.evolab",
+    mimeType: "application/zip",
+    buffer: Buffer.from("not a checkpoint"),
+  });
   await expect(page.getByRole("alert")).toContainText("truncated");
   await expect(
     page.getByLabel("Saved experiments", { exact: true }),
@@ -178,4 +178,156 @@ test("an invalid import leaves the current experiment and saved library intact",
   await expect(
     page.getByRole("button", { name: "Train 10 generations", exact: true }),
   ).toBeEnabled();
+});
+
+declare global {
+  interface Window {
+    m6FailSaves?: boolean;
+  }
+}
+
+test("failed IndexedDB writes pause training and keep an exportable pending population", async ({
+  page,
+}, info) => {
+  await page.addInitScript(() => {
+    const put = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (
+      ...args: Parameters<IDBObjectStore["put"]>
+    ) {
+      if (window.m6FailSaves && this.name === "checkpoints")
+        throw new DOMException(
+          "Injected checkpoint failure",
+          "QuotaExceededError",
+        );
+      return put.apply(this, args);
+    };
+  });
+  await study(page, "m6-quota");
+  await page.evaluate(() => (window.m6FailSaves = true));
+  await train(page, 1);
+  await expect(page.locator(".save-status strong")).toHaveText(
+    "Save needs attention",
+  );
+  await expect(
+    page.getByRole("button", { name: "Retry save", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Train 1 generation", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: /Generation 0 champion/ }),
+  ).toHaveCount(0);
+  const counts = await page.evaluate(async () => {
+    const request = indexedDB.open("evolution-lab-v1"),
+      db = await new Promise<IDBDatabase>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    const tx = db.transaction(["parameters", "trials"], "readonly"),
+      count = (name: string) =>
+        new Promise<number>((resolve, reject) => {
+          const r = tx.objectStore(name).count();
+          r.onsuccess = () => resolve(r.result);
+          r.onerror = () => reject(r.error);
+        });
+    const result = await Promise.all([count("parameters"), count("trials")]);
+    db.close();
+    return result;
+  });
+  expect(counts).toEqual([16, 0]);
+  const downloading = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export checkpoint", exact: true })
+    .click();
+  const download = await downloading,
+    path = info.outputPath("pending.evolab");
+  await download.saveAs(path);
+  expect(
+    readArchive(new Uint8Array(await readFile(path))).checkpoint.generation,
+  ).toBe(1);
+  await page.evaluate(() => (window.m6FailSaves = false));
+  await page.getByRole("button", { name: "Retry save", exact: true }).click();
+  await expect(page.locator(".save-status strong")).toHaveText(
+    "Saved population 1",
+  );
+  await expect(
+    page.getByRole("button", { name: /Generation 0 champion/ }),
+  ).toHaveCount(1);
+  await page.reload();
+  await expect(page.locator(".save-status strong")).toHaveText(
+    "Saved population 1",
+  );
+});
+
+test("a stale tab cannot overwrite a newer saved population", async ({
+  page,
+  context,
+}) => {
+  await study(page, "m6-conflict");
+  const original = await page
+    .getByLabel("Saved experiments", { exact: true })
+    .inputValue();
+  const second = await context.newPage();
+  await second.goto("./");
+  await expect(second.locator(".save-status strong")).toHaveText(
+    "Saved population 0",
+  );
+  await train(page, 2);
+  await expect(page.locator(".save-status strong")).toHaveText(
+    "Saved population 2",
+  );
+  await train(second, 1);
+  await expect(second.locator(".save-status strong")).toHaveText(
+    "Newer save detected",
+  );
+  await second
+    .getByRole("button", { name: "Save as separate experiment", exact: true })
+    .click();
+  await expect(second.locator(".save-status strong")).toHaveText(
+    "Saved population 0",
+  );
+  await expect(
+    second.getByLabel("Saved experiments", { exact: true }).locator("option"),
+  ).toHaveCount(3);
+  await second
+    .getByLabel("Saved experiments", { exact: true })
+    .selectOption(original);
+  await expect(second.locator(".save-status strong")).toHaveText(
+    "Saved population 2",
+  );
+  await second.close();
+});
+
+test("unavailable browser storage preserves a complete population for export", async ({
+  page,
+}, info) => {
+  await page.addInitScript(() => {
+    IDBFactory.prototype.open = function () {
+      throw new DOMException("Storage disabled", "SecurityError");
+    };
+  });
+  await study(page, "m6-unavailable");
+  await train(page, 1);
+  await expect(page.locator(".save-status strong")).toHaveText(
+    "Save needs attention",
+  );
+  await expect(
+    page.getByRole("button", { name: "Export checkpoint", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Train 1 generation", exact: true }),
+  ).toBeDisabled();
+  await expect(page.locator(".save-status strong")).toHaveText(
+    "Save needs attention",
+  );
+  const downloading = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export checkpoint", exact: true })
+    .click();
+  const download = await downloading,
+    path = info.outputPath("unavailable.evolab");
+  await download.saveAs(path);
+  expect(
+    readArchive(new Uint8Array(await readFile(path))).checkpoint.generation,
+  ).toBe(1);
 });

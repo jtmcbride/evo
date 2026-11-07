@@ -1269,3 +1269,11 @@ td {
     flex: 1;
   }
 }
+.error-banner > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.storage-notice,
+.save-status span {
+  overflow-wrap: anywhere;
+}

@@ -273,6 +273,7 @@ export class SimulationRuntime {
         p.playing = c.playing && !p.runner.result();
         p.speed = c.speed;
         p.lastTime = this.now();
+        if (!p.playing) this.publishFrame(true);
         break;
       }
       case "stepPlayback": {
@@ -350,6 +351,7 @@ export class SimulationRuntime {
     }
     if (p.runner.result() && p.playing) {
       p.playing = false;
+      this.publishFrame(true);
       this.publishStatus();
     }
     return count;
