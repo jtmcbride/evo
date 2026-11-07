@@ -51,13 +51,19 @@ export class ArenaRenderer {
       this.staticLayer.width = width;
       this.staticLayer.height = height;
       const bg = this.staticLayer.getContext("2d")!;
-      bg.setTransform(
+      bg.fillStyle = C.paper;
+      bg.fillRect(0, 0, width, height);
+      const scale = Math.min(
         width / scenario.config.width,
-        0,
-        0,
         height / scenario.config.height,
+      );
+      bg.setTransform(
+        scale,
         0,
         0,
+        scale,
+        (width - scenario.config.width * scale) / 2,
+        (height - scenario.config.height * scale) / 2,
       );
       this.background(bg, scenario);
     }
@@ -66,7 +72,15 @@ export class ArenaRenderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, width, height);
     ctx.drawImage(this.staticLayer, 0, 0);
-    ctx.setTransform(width / c.width, 0, 0, height / c.height, 0, 0);
+    const scale = Math.min(width / c.width, height / c.height);
+    ctx.setTransform(
+      scale,
+      0,
+      0,
+      scale,
+      (width - c.width * scale) / 2,
+      (height - c.height * scale) / 2,
+    );
     const state = frame?.state ?? {
       ...scenario.start,
       remaining: scenario.food.map(() => true),
@@ -160,6 +174,11 @@ export class ArenaRenderer {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(heading);
+    ctx.strokeStyle = "#3458d466";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, r + 8, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.fillStyle = C.blue;
     ctx.strokeStyle = C.white;
     ctx.lineWidth = 2;

@@ -148,6 +148,7 @@ export class WorkbenchStore {
   private scope: { experimentId: string; epoch: number } | null = null;
   private checkpoint: ExperimentCheckpoint | null = null;
   private replays: Replay[] = [];
+  private selectedReplay: Replay | null = null;
   private serial = 0;
   private disposed = false;
   private unsubscribe: () => void;
@@ -410,6 +411,7 @@ export class WorkbenchStore {
     }
   }
   private async open(value: Omit<Selection, "playbackId">) {
+    if (value.historyGeneration === null) this.selectedReplay = null;
     const serial = ++this.serial,
       selection = { ...value, playbackId: `workbench-${serial}` };
     this.frame = null;
@@ -463,8 +465,13 @@ export class WorkbenchStore {
     });
   }
   selectChampion(generation: number, trial = 0) {
-    const r = this.replays.find((r) => r.generation === generation);
+    const r =
+      this.replays.find((r) => r.generation === generation) ??
+      (this.selectedReplay?.generation === generation
+        ? this.selectedReplay
+        : null);
     if (!r || !r.scenarios[trial]) return;
+    this.selectedReplay = r;
     return this.open({
       genome: r.genome,
       generation,
@@ -477,7 +484,11 @@ export class WorkbenchStore {
   }
   getTrialCount() {
     const g = this.view.selection?.historyGeneration;
-    return this.replays.find((r) => r.generation === g)?.scenarios.length ?? 1;
+    return (
+      (this.selectedReplay && this.selectedReplay.generation === g
+        ? this.selectedReplay.scenarios.length
+        : this.replays.find((r) => r.generation === g)?.scenarios.length) ?? 1
+    );
   }
   async playback(
     action: "toggle" | "pause" | "tick" | "decision" | "seek",

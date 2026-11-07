@@ -97,3 +97,35 @@ test("workbench keeps stable snapshots and replays the champion under its origin
     store.dispose();
   }
 });
+
+test("a selected champion keeps its trial choices when older history is evicted", async () => {
+  const transport = new Transport(),
+    client = new SimulationClient(transport as unknown as Worker),
+    store = new WorkbenchStore(client);
+  const until = async (count: number) => {
+    for (let i = 0; i < 2000 && store.getView().history.length < count; i++) {
+      transport.runtime.pump();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    expect(store.getView().history).toHaveLength(count);
+  };
+  try {
+    await client.ready;
+    expect(store.getTrialCount()).toBe(1);
+    store.updateDraft({ population: 16, seconds: 5 });
+    await store.create();
+    await store.train(1);
+    await until(1);
+    await store.selectChampion(0, 1);
+    const original = store.getView().selection!.scenario.hash;
+    await store.train(50);
+    await until(51);
+    expect(store.getView().replayGenerations).toHaveLength(50);
+    expect(store.getView().replayGenerations).not.toContain(0);
+    expect(store.getTrialCount()).toBe(3);
+    await store.selectChampion(0, 1);
+    expect(store.getView().selection!.scenario.hash).toBe(original);
+  } finally {
+    store.dispose();
+  }
+}, 15000);

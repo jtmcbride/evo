@@ -900,3 +900,301 @@ td {
     animation: none !important;
   }
 }
+.brain-schema {
+  font: 9px var(--mono);
+  color: var(--muted);
+}
+.inspector-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 0 12px;
+}
+.inspector-tabs button {
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  background: white;
+  padding: 12px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.inspector-tabs [aria-selected="true"] {
+  border-bottom-color: var(--blue);
+  color: var(--blue);
+  font-weight: 650;
+}
+.inspector-empty {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 22px 18px 30px;
+}
+.brain-view,
+.sensors-view {
+  padding: 14px 16px 0;
+}
+.brain-controls {
+  display: flex;
+  gap: 12px;
+}
+.brain-controls > label:first-child {
+  width: 55%;
+}
+.brain-controls > label:last-child {
+  width: 45%;
+  font-size: 9px;
+  position: relative;
+  gap: 8px;
+}
+.brain-controls > label:last-child > span {
+  font: 10px var(--mono);
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}
+.brain-controls select {
+  font-size: 10px;
+}
+.brain-controls input {
+  width: 75%;
+  margin-top: 4px;
+}
+.brain-columns {
+  display: flex;
+  justify-content: space-between;
+  font: 8px var(--mono);
+  color: var(--muted);
+  margin-top: 18px;
+}
+.brain-graph {
+  display: block;
+  width: 100%;
+  height: 340px;
+}
+.brain-graph text {
+  font: 8px var(--mono);
+  fill: #53677c;
+  pointer-events: none;
+}
+.neuron {
+  cursor: pointer;
+}
+.neuron:focus {
+  outline: none;
+}
+.neuron:focus circle {
+  stroke: #087e8b;
+  stroke-width: 3;
+}
+.weight-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  font-size: 8px;
+  color: var(--muted);
+}
+.weight-legend > span:first-child {
+  color: var(--blue);
+}
+.weight-legend > span:nth-child(2) {
+  color: var(--orange);
+}
+.brain-hint {
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+  padding: 12px 0;
+}
+.focused-value {
+  font: 10px var(--mono);
+  padding: 12px 0;
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.focused-value output {
+  color: var(--blue);
+}
+.focused-value > span {
+  color: var(--muted);
+}
+.motor-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 12px 0 15px;
+  border-top: 1px solid var(--line);
+}
+.motor-command > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+.motor-command strong {
+  font: 10px var(--mono);
+  font-weight: 500;
+}
+.signed-track {
+  height: 7px;
+  position: relative;
+  background: #edf1f6;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.signed-track i {
+  display: block;
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+.signed-track b {
+  position: absolute;
+  left: 50%;
+  height: 100%;
+  width: 1px;
+  background: #6e8296;
+}
+.inspector-details {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+.inspector-details summary {
+  font-size: 11px;
+}
+.inspector-details p {
+  font-size: 9px;
+  margin-top: 8px;
+}
+.inspector-description {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+.sensor-grid-head,
+.sensor-row {
+  display: grid;
+  grid-template-columns: 0.85fr 1fr 1fr;
+  gap: 9px;
+  align-items: center;
+}
+.sensor-grid-head {
+  font-size: 9px;
+  color: var(--muted);
+  padding-bottom: 8px;
+}
+.sensor-row {
+  min-height: 32px;
+  border-top: 1px solid var(--line);
+  font-size: 10px;
+}
+.sensor-reading {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.sensor-meter {
+  height: 5px;
+  flex: 1;
+  position: relative;
+  background: #edf1f6;
+}
+.sensor-meter i {
+  height: 100%;
+  display: block;
+  background: var(--teal);
+}
+.sensor-row > .sensor-reading:last-child .sensor-meter i {
+  background: #b86d12;
+}
+.sensor-reading output {
+  font: 8px var(--mono);
+  width: 32px;
+  text-align: right;
+}
+.sensor-state {
+  margin: 10px 0 0;
+  padding: 8px 0;
+}
+.sensor-state > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  margin: 10px 0;
+}
+.sensor-state dt {
+  color: var(--muted);
+}
+.sensor-state dd {
+  margin: 0;
+  font: 10px var(--mono);
+}
+.measurement-view {
+  padding: 14px 0 0;
+}
+.measurement-view > .inspector-description {
+  padding: 0 18px;
+}
+.provenance {
+  background: var(--paper);
+  padding: 16px 18px;
+  font-size: 10px;
+  line-height: 1.8;
+  margin-top: 18px;
+}
+.provenance > p:last-child {
+  margin-top: 10px;
+}
+.provenance code {
+  font-family: var(--mono);
+}
+.arena-canvas {
+  height: clamp(280px, 42vh, 480px);
+  aspect-ratio: auto;
+}
+@media (max-width: 760px) {
+  .brain-graph {
+    height: 360px;
+  }
+  .arena-canvas {
+    height: 300px;
+  }
+  .brain-controls > label:last-child {
+    font-size: 10px;
+  }
+  .sensor-reading output {
+    font-size: 10px;
+  }
+}
+@media (max-width: 760px) {
+  button {
+    min-height: 40px;
+  }
+  .mobile-tabs button {
+    min-height: 44px;
+  }
+  input:not([type="range"]):not([type="checkbox"]),
+  select {
+    min-height: 38px;
+  }
+  .view-controls label {
+    min-height: 30px;
+  }
+  .view-controls input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+}
+@media (max-width: 760px) {
+  .mobile-tabs button[aria-selected="true"],
+  .mobile-tabs button[aria-selected="true"]:hover {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+}

@@ -1,6 +1,6 @@
 **Evolution Lab implementation plan**
 
-Build a browser application that evolves small neural controllers in independent foraging trials, explains their behavior through replay and inspection, and preserves enough provenance to repeat experiments. M0–M4 are implemented and committed; see [milestone progress](progress.md) for verification. Later milestones remain proposed implementation work. Numerical values below are starting configurations to validate through benchmarks.
+Build a browser application that evolves small neural controllers in independent foraging trials, explains their behavior through replay and inspection, and preserves enough provenance to repeat experiments. M0–M5 are implemented and committed; see [milestone progress](progress.md) for verification. Later milestones remain proposed implementation work. Numerical values below are starting configurations to validate through benchmarks.
 
 The first playable release runs evolution, displays a selected trial, supports sensor interventions, and saves and restores generation checkpoints. The subsequent complete laboratory release adds lineage comparison and controlled experiment branches. Both use the same numerical engine.
 
@@ -389,7 +389,7 @@ Each milestone should be reviewable independently with its tests and an executab
 
 **15. Define the development commands and delivery workflow.**
 
-The command surfaces below describe the complete roadmap. All command surfaces below are implemented through M4; `test:browser` currently verifies worker diagnostics in Chromium:
+The command surfaces below describe the complete roadmap. All command surfaces below are implemented through M5; `test:browser` verifies the worker and workbench in Chromium:
 
 ```text
 npm run dev
@@ -416,4 +416,4 @@ The production app executes in the visitor's browser. It can restore saved gener
 
 The completed first implementation batch was M0 followed by M1: create the toolchain, freeze seed and observation conventions, implement the world, and run a scripted controller headlessly. Its concrete demonstration is a seeded episode whose movement and food accounting match fixtures, whose result hash repeats, and whose tick chunk size does not affect the result.
 
-M2 extended that demonstration to a real neural controller and exact episode restore. M3 added evolution. The completed engine demonstrations, exploratory pilot, and M4 worker acceptance establish the starting point for the M5 visual workbench.
+M2 extended that demonstration to a real neural controller and exact episode restore. M3 added evolution. The engine demonstrations, exploratory pilot, M4 worker acceptance, and M5 workbench are complete. M6 adds durable browser storage, checkpoint archives, and recovery to the interactive application.

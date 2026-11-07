@@ -80,8 +80,13 @@ function ArenaCanvas({
         if (!s || v.sensorOnly) return;
         const rect = event.currentTarget.getBoundingClientRect(),
           c = v.selection!.scenario.config,
-          x = ((event.clientX - rect.left) * c.width) / rect.width,
-          y = ((event.clientY - rect.top) * c.height) / rect.height;
+          scale = Math.min(rect.width / c.width, rect.height / c.height),
+          x =
+            (event.clientX - rect.left - (rect.width - c.width * scale) / 2) /
+            scale,
+          y =
+            (event.clientY - rect.top - (rect.height - c.height * scale) / 2) /
+            scale;
         if (Math.hypot(x - s.x, y - s.y) < 16) onInspect();
       }}
     />
@@ -184,19 +189,24 @@ export function Arena({
           Controller
           <select
             aria-label="Selected controller"
-            value={selection?.genome.id ?? ""}
+            value={selection ? `selected:${selection.genome.id}` : ""}
             disabled={!v.definition || v.initializing || v.loadingPlayback}
-            onChange={(e) => void store.selectPopulation(e.target.value)}
+            onChange={(e) =>
+              void store.selectPopulation(
+                e.target.value.replace(/^population:/, ""),
+              )
+            }
           >
             {!selection ? (
               <option value="">Create an experiment first</option>
             ) : null}
-            {selection &&
-            !v.population.some((g) => g.id === selection.genome.id) ? (
-              <option value={selection.genome.id}>{selection.label}</option>
+            {selection ? (
+              <option value={`selected:${selection.genome.id}`}>
+                {selection.label} · born {selection.genome.birthGeneration}
+              </option>
             ) : null}
             {v.population.map((g, i) => (
-              <option key={g.id} value={g.id}>
+              <option key={g.id} value={`population:${g.id}`}>
                 Population {v.status?.generation ?? 0} · slot {i + 1} · born{" "}
                 {g.birthGeneration}
               </option>

@@ -263,6 +263,7 @@ export class SimulationRuntime {
         this.frameDirty = true;
         this.reply(requestId, { type: "playback", snapshot: this.snapshot() });
         this.publishFrame(true);
+        this.publishStatus();
         return;
       }
       case "setPlaybackState": {
@@ -303,6 +304,7 @@ export class SimulationRuntime {
         p.playing = false;
         p.debt = 0;
         p.seek = { requestId, target: c.tick };
+        this.publishStatus();
         return;
       }
       case "snapshotReceived":
@@ -316,6 +318,7 @@ export class SimulationRuntime {
           this.cancelCheckpoint("Request cancelled");
         if (this.playback?.seek?.requestId === c.targetRequestId)
           this.cancelSeek("Request cancelled");
+        this.publishStatus();
         return;
       case "dispose":
         this.cancelCheckpoint("Runtime disposed");
@@ -345,7 +348,10 @@ export class SimulationRuntime {
         }
       }
     }
-    if (p.runner.result()) p.playing = false;
+    if (p.runner.result() && p.playing) {
+      p.playing = false;
+      this.publishStatus();
+    }
     return count;
   }
   private publishFrame(force = false) {
@@ -414,6 +420,7 @@ export class SimulationRuntime {
               snapshot: this.snapshot(),
             });
             this.publishFrame(true);
+            this.publishStatus();
           }
         } else if (p.playing) {
           const time = this.now();
@@ -433,6 +440,7 @@ export class SimulationRuntime {
         }
         p.playing = false;
         this.error(null, "playback", "PLAYBACK_FAILED", error);
+        this.publishStatus();
       }
     }
     if (this.hasTrainingWork) {
@@ -452,6 +460,7 @@ export class SimulationRuntime {
         this.runRequested = false;
         this.cancelCheckpoint("Training failed");
         this.error(null, "training", "TRAINING_FAILED", error);
+        this.publishStatus();
       }
     }
     this.publishFrame();

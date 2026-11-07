@@ -1,6 +1,6 @@
 **Evolution Lab**
 
-A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M4 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser now runs training and independent playback through a module worker, with a runtime diagnostics page. The full visual workbench remains M5.
+A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M5 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser workbench includes seeded setup, training controls, Canvas playback, an inspectable neural graph, sensor readings, measurements, and training/validation history. Historical champions replay their original trials.
 
 Use Node 24.18.0 and the committed npm lockfile:
 
@@ -53,4 +53,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-The test command builds with `/evo/` as the asset base, starts a local preview server, and runs Chromium acceptance. `npm run test:engine` includes pure-engine and runtime/client unit tests. The worker uses approximately 8 ms scheduling slices, exact fixed ticks, a real task yield, and one outstanding render snapshot. `SimulationClient` owns startup, pending requests, stale-message filtering, failure notifications, and disposal. See [the worker contract and acceptance evidence](docs/worker-runtime.md).
+The test command builds with `/evo/` as the asset base, starts a local preview server, and runs Chromium worker and workbench acceptance, including automated accessibility checks. `npm run test:engine` includes pure-engine and runtime/client unit tests. The worker uses approximately 8 ms scheduling slices, exact fixed ticks, a real task yield, and one outstanding render snapshot. `SimulationClient` owns startup, pending requests, stale-message filtering, failure notifications, and disposal. See [the worker contract and acceptance evidence](docs/worker-runtime.md).
+
+
+The main workbench is available at the root URL from `npm run dev`. Configure a world, create an experiment, and train a batch of generations. Select a population controller or historical champion to inspect its original observations, network activity, and motor commands. Use the sensor-only view to hide global geometry. Mobile layouts provide Inspector/History tabs, and Space/right arrow control playback outside form controls. [The workbench guide](docs/workbench.md) describes exact decision timing, replay retention, and verification. Browser sessions remain in memory until M6 adds durable saves.

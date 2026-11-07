@@ -251,3 +251,38 @@ test("training errors stop selection without becoming zero-score evaluations", (
   h.send({ type: "initialize", checkpoint: h.checkpoint });
   expect(h.runtime.status().phase).toBe("readyToEvaluate");
 });
+
+test("idle playback publishes final and replacement status without waiting for another pump", () => {
+  const h = setup();
+  h.send({ type: "openPlayback", playbackId: "p", definition: h.playback });
+  h.send({
+    type: "setPlaybackState",
+    playbackId: "p",
+    playing: true,
+    speed: 64,
+  });
+  h.elapse(1000);
+  h.runtime.pump();
+  const statuses = h.events.filter((e) => e.type === "status");
+  expect(statuses.at(-1)?.status.playing).toBe(false);
+  h.send({
+    type: "setPlaybackState",
+    playbackId: "p",
+    playing: false,
+    speed: 1,
+  });
+  h.send({ type: "openPlayback", playbackId: "new", definition: h.playback });
+  expect(
+    h.events.filter((e) => e.type === "status").at(-1)?.status.playbackId,
+  ).toBe("new");
+  const seek = h.send({ type: "seekPlayback", playbackId: "new", tick: 17 });
+  expect(
+    h.events.filter((e) => e.type === "status").at(-1)?.status.seeking,
+  ).toBe(true);
+  h.until(() =>
+    h.events.some((e) => e.type === "reply" && e.requestId === seek),
+  );
+  expect(
+    h.events.filter((e) => e.type === "status").at(-1)?.status.seeking,
+  ).toBe(false);
+});
