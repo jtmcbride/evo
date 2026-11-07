@@ -24,7 +24,7 @@ function parameterBytes(p: Float32Array) {
 const manifestSchema = z
   .object({
     format: z.literal("evolution-lab"),
-    formatVersion: z.literal(1),
+    formatVersion: z.union([z.literal(1), z.literal(2)]),
     engineVersion: z.string().max(100),
     kind: z.literal("checkpoint"),
     ancestry: z.literal("partial"),
@@ -60,11 +60,27 @@ export function createArchive(value: SavedSession): Uint8Array {
     bookmark: session.bookmark
       ? { ...session.bookmark, genome: external(session.bookmark.genome) }
       : null,
+    comparisons: (session.comparisons ?? []).map((c) => {
+      const controller = c.source.definition.controller;
+      if (controller.kind !== "neural") return c;
+      const key = parameterHash(controller.parameters);
+      files[parameterPath(key)] = parameterBytes(controller.parameters);
+      return {
+        ...c,
+        source: {
+          ...c.source,
+          definition: {
+            ...c.source.definition,
+            controller: { ...controller, parameters: { $parameter: key } },
+          },
+        },
+      };
+    }),
   };
   files["session.json"] = strToU8(encode(data));
   const manifest = {
     format: "evolution-lab",
-    formatVersion: 1,
+    formatVersion: 2,
     engineVersion: ENGINE_VERSION,
     kind: "checkpoint",
     ancestry: "partial",
@@ -241,5 +257,8 @@ export function readArchive(bytes: Uint8Array): SavedSession {
   );
   if (used.size !== files.size)
     throw new Error("Archive contains unreferenced records");
-  return parseSession(decode(JSON.stringify(raw)));
+  const session = parseSession(decode(JSON.stringify(raw)));
+  if (manifest.formatVersion === 1 && session.comparisons?.length)
+    throw new Error("Comparisons require archive version 2");
+  return session;
 }

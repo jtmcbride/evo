@@ -18,6 +18,7 @@ export function savedFixture(seed = "save-test"): SavedSession {
     history: [],
     replays: [],
     bookmark: null,
+    comparisons: [],
     provenance: { created: fingerprint(), current: fingerprint(), changes: [] },
   };
 }

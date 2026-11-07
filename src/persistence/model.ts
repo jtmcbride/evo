@@ -11,6 +11,8 @@ import {
 } from "../core/evolution";
 import { hash, parameterHash } from "../core/canonical";
 import { validateScenario } from "../core/world/scenario";
+import { comparisonId, type SensorComparison } from "../core/comparison";
+import { restoreEpisode, validateSensorMask } from "../core/episode";
 export interface Settings {
   name: string;
   preset: "open" | "obstacles";
@@ -76,6 +78,7 @@ export interface SavedSession {
   history: GenerationSummary[];
   replays: Replay[];
   bookmark: Bookmark | null;
+  comparisons?: SensorComparison[];
   provenance: {
     created: RuntimeFingerprint;
     current: RuntimeFingerprint;
@@ -181,6 +184,15 @@ const result = z
         scenarioHash: digest,
         controllerId: str,
         controllerVersion: digest,
+        intervention: z
+          .object({
+            kind: z.literal("sensorMask"),
+            version: z.literal(1),
+            channel: integer.max(19),
+            startTick: integer.max(5397),
+          })
+          .strict()
+          .optional(),
         hash: digest,
       })
       .strict(),
@@ -195,6 +207,107 @@ const result = z
       "timeLimit",
     ]),
     score: integer.max(200),
+  })
+  .strict();
+const trace = z
+  .object({
+    tick: integer.max(5400),
+    x: finite,
+    y: finite,
+    heading: finite,
+    inputs: z.array(finite.min(-1).max(1)).length(20),
+    rawInputs: z.array(finite.min(-1).max(1)).length(20).optional(),
+    hidden: z.array(finite.min(-1).max(1)).length(12).nullable(),
+    outputs: z.array(finite.min(-1).max(1)).length(2),
+  })
+  .strict();
+const arm = z
+  .object({
+    result,
+    firstDecision: trace,
+    trajectory: z
+      .array(
+        z.object({ tick: integer.max(5400), x: finite, y: finite }).strict(),
+      )
+      .min(2)
+      .max(1802),
+  })
+  .strict();
+const comparison = z
+  .object({
+    version: z.literal(1),
+    id: digest,
+    intervention: result.shape.spec.shape.intervention.unwrap(),
+    source: z
+      .object({
+        formatVersion: z.literal(1),
+        engineVersion: z.literal(ENGINE_VERSION),
+        definition: z
+          .object({
+            scenario,
+            trace: z.boolean().optional(),
+            controller: z.discriminatedUnion("kind", [
+              z
+                .object({
+                  kind: z.literal("neural"),
+                  id: str,
+                  parameters: genome.shape.parameters,
+                })
+                .strict(),
+              z.object({ kind: z.literal("scripted"), id: str }).strict(),
+              z
+                .object({
+                  kind: z.literal("constant"),
+                  id: str,
+                  left: finite.min(-1).max(1),
+                  right: finite.min(-1).max(1),
+                })
+                .strict(),
+              z
+                .object({
+                  kind: z.literal("random"),
+                  id: str,
+                  seed: z.string().max(256),
+                })
+                .strict(),
+            ]),
+          })
+          .strict(),
+        state: z
+          .object({
+            x: finite,
+            y: finite,
+            heading: finite,
+            energy: finite,
+            speed: finite,
+            angularSpeed: finite,
+            contact: z.boolean(),
+            remaining: z.array(z.boolean()).max(200),
+            tick: integer.max(5400),
+            foodCollected: integer.max(200),
+            distanceTravelled: finite.nonnegative(),
+            contactTicks: integer.max(5400),
+            left: finite.min(-1).max(1),
+            right: finite.min(-1).max(1),
+            terminal: result.shape.terminalReason.nullable(),
+          })
+          .strict(),
+        controllerState: z
+          .tuple([
+            integer.max(0xffffffff),
+            integer.max(0xffffffff),
+            integer.max(0xffffffff),
+            integer.max(0xffffffff),
+          ])
+          .nullable(),
+        lastDecision: trace.nullable(),
+      })
+      .strict(),
+    control: arm,
+    masked: arm,
+    actionDifferences: z
+      .object({ changed: integer.max(1800), compared: integer.max(1800) })
+      .strict(),
   })
   .strict();
 const settings = z
@@ -302,6 +415,7 @@ const schema = z
       })
       .strict()
       .nullable(),
+    comparisons: z.array(comparison).max(32).default([]),
     provenance: z
       .object({
         created: runtime,
@@ -343,6 +457,7 @@ function validateResult(r: TrialResult, g: Genome, s: Scenario) {
   const { hash: _, ...spec } = r.spec;
   void _;
   if (
+    r.spec.intervention !== undefined ||
     hash(spec) !== r.spec.hash ||
     r.spec.scenarioHash !== s.hash ||
     r.spec.controllerId !== g.id ||
@@ -355,6 +470,84 @@ function validateResult(r: TrialResult, g: Genome, s: Scenario) {
     r.remainingEnergy > s.config.maxEnergy
   )
     throw new Error("Invalid evaluation reference");
+}
+export function parseComparison(value: unknown): SensorComparison {
+  const c = comparison.parse(value) as SensorComparison;
+  const scenario = c.source.definition.scenario,
+    controller = c.source.definition.controller;
+  validateSensorMask(c.intervention, scenario.config.maxTicks);
+  const aligned = restoreEpisode(c.source);
+  if (
+    c.intervention.startTick !== Math.ceil(c.source.state.tick / 3) * 3 ||
+    aligned.result() ||
+    c.id !== comparisonId(c.source, c.intervention)
+  )
+    throw new Error("Invalid comparison source");
+  aligned.advance(c.intervention.startTick - c.source.state.tick);
+  if (aligned.result()) throw new Error("Comparison starts after termination");
+  const start = aligned.inspect();
+  for (const [index, a] of [c.control, c.masked].entries()) {
+    const { hash: checksum, ...spec } = a.result.spec;
+    const expectedMask = index === 1 ? c.intervention : undefined;
+    if (
+      hash(spec) !== checksum ||
+      hash(spec.intervention ?? null) !== hash(expectedMask ?? null) ||
+      spec.scenarioHash !== scenario.hash ||
+      spec.controllerId !== controller.id ||
+      spec.controllerVersion !==
+        (controller.kind === "neural"
+          ? parameterHash(controller.parameters)
+          : hash(controller)) ||
+      a.result.foodCollected !== a.result.score ||
+      a.result.foodCollected > scenario.food.length ||
+      a.result.remainingEnergy > scenario.config.maxEnergy ||
+      a.result.survivalTicks > scenario.config.maxTicks ||
+      a.result.survivalTicks <= start.tick ||
+      a.result.contactTicks > a.result.survivalTicks ||
+      a.firstDecision.tick !== start.tick ||
+      a.firstDecision.x !== start.x ||
+      a.firstDecision.y !== start.y ||
+      a.trajectory[0].tick !== start.tick ||
+      a.trajectory[0].x !== start.x ||
+      a.trajectory[0].y !== start.y ||
+      a.trajectory.at(-1)!.tick !== a.result.survivalTicks
+    )
+      throw new Error("Invalid comparison outcome");
+    a.trajectory.forEach((p, i) => {
+      if (
+        p.x < 0 ||
+        p.x > scenario.config.width ||
+        p.y < 0 ||
+        p.y > scenario.config.height ||
+        (i > 0 &&
+          (p.tick <= a.trajectory[i - 1].tick ||
+            p.tick - a.trajectory[i - 1].tick > 3))
+      )
+        throw new Error("Invalid comparison trajectory");
+    });
+  }
+  const a = c.control.firstDecision,
+    b = c.masked.firstDecision;
+  if (
+    !b.rawInputs ||
+    b.rawInputs.some((v, i) => !Object.is(v, a.inputs[i])) ||
+    b.inputs.some(
+      (v, i) =>
+        !Object.is(v, i === c.intervention.channel ? 0 : b.rawInputs![i]),
+    ) ||
+    c.actionDifferences.changed > c.actionDifferences.compared ||
+    c.actionDifferences.compared !==
+      Math.ceil(
+        (Math.min(
+          c.control.result.survivalTicks,
+          c.masked.result.survivalTicks,
+        ) -
+          start.tick) /
+          3,
+      )
+  )
+    throw new Error("Invalid comparison observations");
+  return c;
 }
 export function parseSession(value: unknown): SavedSession {
   if (
@@ -376,6 +569,9 @@ export function parseSession(value: unknown): SavedSession {
           .join("; "),
     );
   const s = parsed.data as SavedSession;
+  s.comparisons = s.comparisons!.map(parseComparison);
+  if (new Set(s.comparisons.map((c) => c.id)).size !== s.comparisons.length)
+    throw new Error("Duplicate comparison");
   validateCheckpoint(s.checkpoint);
   s.checkpoint.population.forEach(validateGenome);
   const c = s.checkpoint,

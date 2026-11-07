@@ -5,6 +5,7 @@ import type { Genome } from "../core/model";
 import type { GenerationCommit } from "../core/experiment";
 import {
   parseSession,
+  parseComparison,
   type SavedSession,
   type SavedEntry,
   type SavedHandle,
@@ -14,7 +15,9 @@ import {
   validateCommit,
   RevisionConflict,
   type Repository,
+  mergeComparisons,
 } from "./repository";
+import type { SensorComparison } from "../core/comparison";
 interface CheckpointRow {
   experimentId: string;
   generation: number;
@@ -37,6 +40,10 @@ export class LabDatabase extends Dexie {
   evaluations!: Table<DataRow, [string, string]>;
   trials!: Table<DataRow, [string, string]>;
   meta!: Table<{ key: string; value: string }, string>;
+  comparisons!: Table<
+    { experimentId: string; key: string; payload: string; checksum: string },
+    [string, string]
+  >;
   constructor(name = "evolution-lab-v1") {
     super(name);
     this.version(1).stores({
@@ -51,6 +58,7 @@ export class LabDatabase extends Dexie {
       trials: "[experimentId+key],experimentId",
       meta: "key",
     });
+    this.version(2).stores({ comparisons: "[experimentId+key],experimentId" });
   }
 }
 function prepareRows(
@@ -76,7 +84,8 @@ function prepareRows(
       ...commit.record.validationScenarios,
     ])
       scenarios.set(s.hash, s);
-  const payload = encode(session),
+  // Numerical checkpoint payloads stay small; comparison records have independent checksums.
+  const payload = encode({ ...session, comparisons: [] }),
     trials: DataRow[] = [],
     evaluations: DataRow[] = [];
   const result = (data: unknown, key: string) =>
@@ -158,12 +167,19 @@ export class IndexedRepository implements Repository {
       "r",
       this.db.experiments,
       this.db.checkpoints,
+      this.db.comparisons,
       async () => {
         const entry = await this.db.experiments.get(id);
         if (!entry) throw new Error("Saved experiment not found");
         const row = await this.db.checkpoints.get([id, entry.generation]);
         if (!row) throw new Error("Saved checkpoint is missing");
-        return this.decode(row, entry);
+        const handle = this.decode(row, entry);
+        const records = await this.readComparisons(id);
+        handle.session.comparisons = mergeComparisons(
+          handle.session.comparisons,
+          records,
+        );
+        return handle;
       },
     );
   }
@@ -171,7 +187,7 @@ export class IndexedRepository implements Repository {
     const session = parseSession(value),
       id = crypto.randomUUID(),
       rows = prepareRows(id, session),
-      entry = entryFor(id, 0, session);
+      entry = entryFor(id, 0, { ...session, comparisons: [] });
     await this.db.transaction("rw", this.db.tables, async () => {
       await this.writeRows(id, session, rows);
       await this.db.experiments.add(entry);
@@ -224,7 +240,12 @@ export class IndexedRepository implements Repository {
           },
         });
       }
-      const entry = entryFor(id, revision + 1, session, interrupted);
+      const entry = entryFor(
+        id,
+        revision + 1,
+        { ...session, comparisons: [] },
+        interrupted,
+      );
       await this.db.experiments.put(entry);
       // Keep the head plus historical populations every ten generations.
       await this.db.checkpoints
@@ -242,6 +263,8 @@ export class IndexedRepository implements Repository {
     session: SavedSession,
     rows: ReturnType<typeof prepareRows>,
   ) {
+    for (const c of session.comparisons ?? [])
+      await this.writeComparison(id, c);
     await this.db.parameters.bulkPut(
       rows.genomes.map((g) => ({
         hash: (g.data as Genome).parameterHash,
@@ -280,6 +303,56 @@ export class IndexedRepository implements Repository {
       if (!entry || entry.revision !== revision) throw new RevisionConflict();
       await this.db.experiments.update(id, { interrupted: true });
     });
+  }
+  private async readComparisons(id: string) {
+    const rows = await this.db.comparisons
+      .where("experimentId")
+      .equals(id)
+      .toArray();
+    if (rows.length > 32) throw new Error("Excessive saved comparisons");
+    return rows.map((row) => {
+      if (hash(row.payload) !== row.checksum)
+        throw new Error("Saved comparison checksum mismatch");
+      const c = parseComparison(decode(row.payload));
+      if (row.key !== c.id)
+        throw new Error("Saved comparison identity mismatch");
+      return c;
+    });
+  }
+  private async writeComparison(id: string, c: SensorComparison) {
+    const payload = encode(c),
+      checksum = hash(payload);
+    const old = await this.db.comparisons.get([id, c.id]);
+    if (old) {
+      if (old.checksum !== checksum || hash(old.payload) !== checksum)
+        throw new Error("Comparison checksum conflict");
+      return;
+    }
+    if (
+      (await this.db.comparisons.where("experimentId").equals(id).count()) >= 32
+    )
+      throw new Error(
+        "This experiment already contains 32 comparisons. Start a new experiment for more.",
+      );
+    await this.db.comparisons.add({
+      experimentId: id,
+      key: c.id,
+      payload,
+      checksum,
+    });
+  }
+  async saveComparison(id: string, value: SensorComparison) {
+    const c = parseComparison(value);
+    await this.db.transaction(
+      "rw",
+      this.db.experiments,
+      this.db.comparisons,
+      async () => {
+        if (!(await this.db.experiments.get(id)))
+          throw new Error("Saved experiment not found");
+        await this.writeComparison(id, c);
+      },
+    );
   }
   close() {
     this.db.close();

@@ -3,10 +3,29 @@ import { hash } from "../core/canonical";
 import { checkpointIdentity, type GenerationCommit } from "../core/experiment";
 import {
   parseSession,
+  parseComparison,
   type SavedSession,
   type SavedEntry,
   type SavedHandle,
 } from "./model";
+import type { SensorComparison } from "../core/comparison";
+export function mergeComparisons(
+  a: SensorComparison[] = [],
+  b: SensorComparison[] = [],
+) {
+  const records = new Map(a.map((c) => [c.id, c]));
+  for (const c of b) {
+    const old = records.get(c.id);
+    if (old && hash(encode(old)) !== hash(encode(c)))
+      throw new Error("Comparison checksum conflict");
+    records.set(c.id, c);
+  }
+  if (records.size > 32)
+    throw new Error(
+      "This experiment already contains 32 comparisons. Start a new experiment for more.",
+    );
+  return Array.from(records.values());
+}
 export class RevisionConflict extends Error {
   constructor() {
     super(
@@ -29,6 +48,7 @@ export interface Repository {
     interrupted?: boolean,
   ): Promise<SavedHandle>;
   markRunning(id: string, revision: number): Promise<void>;
+  saveComparison(id: string, comparison: SensorComparison): Promise<void>;
   close(): void;
 }
 export function validateCommit(
@@ -71,6 +91,7 @@ export function entryFor(
 export class MemoryRepository implements Repository {
   private data = new Map<string, SavedHandle>();
   private activeId: string | null = null;
+  private comparisons = new Map<string, SensorComparison[]>();
   async list() {
     return structuredClone(
       Array.from(this.data.values(), (v) => v.entry).sort(
@@ -84,7 +105,16 @@ export class MemoryRepository implements Repository {
   async load(id: string) {
     const h = this.data.get(id);
     if (!h) throw new Error("Saved experiment not found");
-    return structuredClone(h);
+    return structuredClone({
+      ...h,
+      session: {
+        ...h.session,
+        comparisons: mergeComparisons(
+          h.session.comparisons,
+          this.comparisons.get(id),
+        ),
+      },
+    });
   }
   async activate(id: string) {
     if (!this.data.has(id)) throw new Error("Saved experiment not found");
@@ -95,6 +125,7 @@ export class MemoryRepository implements Repository {
       id = crypto.randomUUID(),
       h = { entry: entryFor(id, 0, session), session };
     this.data.set(id, structuredClone(h));
+    this.comparisons.set(id, structuredClone(session.comparisons ?? []));
     this.activeId = id;
     return structuredClone(h);
   }
@@ -115,6 +146,10 @@ export class MemoryRepository implements Repository {
     )
       return old;
     if (old.entry.revision !== revision) throw new RevisionConflict();
+    this.comparisons.set(
+      id,
+      mergeComparisons(old.session.comparisons, session.comparisons),
+    );
     const h = {
       entry: entryFor(id, revision + 1, session, interrupted),
       session,
@@ -126,6 +161,15 @@ export class MemoryRepository implements Repository {
     const old = this.data.get(id);
     if (!old || old.entry.revision !== revision) throw new RevisionConflict();
     old.entry.interrupted = true;
+  }
+  async saveComparison(id: string, value: SensorComparison) {
+    if (!this.data.has(id)) throw new Error("Saved experiment not found");
+    const c = parseComparison(value);
+    const current = await this.load(id);
+    this.comparisons.set(
+      id,
+      mergeComparisons(current.session.comparisons, [c]),
+    );
   }
   close() {}
 }
