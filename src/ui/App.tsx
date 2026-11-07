@@ -3,6 +3,7 @@ import type { WorkbenchStore } from "./store";
 import { useView } from "./hooks";
 import { Setup } from "./experiments/Setup";
 import { Storage } from "./experiments/Storage";
+import { Examples } from "./experiments/Examples";
 import { Training } from "./experiments/Training";
 import { History } from "./experiments/History";
 import { Comparison } from "./experiments/Comparison";
@@ -84,6 +85,7 @@ export function App({ store }: { store: WorkbenchStore }) {
       </header>
       <Notices store={store} />
       <Storage store={store} />
+      <Examples store={store} />
       <Training store={store} />
       <main className="workbench" data-pane={pane}>
         <Setup store={store} compact={compact} />

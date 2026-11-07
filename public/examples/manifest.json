@@ -1,0 +1,31 @@
+{
+  "formatVersion": 1,
+  "suiteId": "benchmark-open-v1",
+  "run": 7,
+  "sourceCommit": "1fb5f40ddc8c6d59b3936aa50ca1223623a6a0b6",
+  "selectionRule": "Nearest to median final validation mean; lowest run index breaks ties",
+  "generatedRuntime": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.18 Safari/537.36",
+    "platform": "MacIntel"
+  },
+  "examples": [
+    {
+      "id": "initial",
+      "title": "Before evolution",
+      "description": "The training-selected starting champion from the representative run, before reproduction.",
+      "file": "initial.evolab",
+      "sha256": "b5500e8cab34c7dd60ef10d954d72c563701757a60bffc57c07691a783ad1a79",
+      "generation": 0,
+      "validationMean": 9.0625
+    },
+    {
+      "id": "final",
+      "title": "After 200 generations",
+      "description": "The final training-selected champion from that same run. Open it to inspect the fixed network, local observations, and motor commands.",
+      "file": "final.evolab",
+      "sha256": "d3961c8bb93d2eb03199033781bef9c2cef3315e53075cd79da4deb2874eac6c",
+      "generation": 199,
+      "validationMean": 29.125
+    }
+  ]
+}
