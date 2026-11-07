@@ -23,7 +23,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
-      - run: npm run test:engine
+      # CPU-heavy multi-generation fixtures should not oversubscribe the runner.
+      - run: npm run test:engine -- --maxWorkers=2
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - name: Build Pages artifact
