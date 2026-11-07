@@ -13,6 +13,8 @@ import {
 } from "../core/evolution";
 import { hash } from "../core/canonical";
 import { encode } from "../core/codec";
+import type { LineageQuery, LineageView } from "../persistence/lineage";
+import type { ControllerComparison } from "../core/comparison/controllers";
 import { generateScenario } from "../core/world/scenario";
 import type { Genome, Scenario, TrialResult } from "../core/model";
 import type { GenerationCommit } from "../core/experiment";
@@ -80,6 +82,7 @@ export function firstScenario(d: ExperimentDefinition): Scenario {
   return generateScenario(hash(["world-v1", d.roots.training, 0, 0]), d.world);
 }
 export interface Selection {
+  lineageId?: string;
   genome: Genome;
   generation: number;
   label: string;
@@ -100,6 +103,12 @@ export interface StorageView {
   archiveBusy: boolean;
 }
 export interface ViewState {
+  lineage: LineageView | null;
+  lineageLoading: boolean;
+  lineageError: string | null;
+  lineageComparison: ControllerComparison | null;
+  lineageComparing: boolean;
+  lineageNotice: string | null;
   comparisons: SensorComparison[];
   comparisonId: string | null;
   comparing: boolean;
@@ -148,6 +157,11 @@ export class WorkbenchStore {
   } | null = null;
   private saving = false;
   private unsavedComparisons = new Set<string>();
+  private lineageSerial = 0;
+  private lineageWanted: { genomeId: string; query: LineageQuery } | null =
+    null;
+  private ancestorReplay: Replay | null = null;
+  private ancestorRequest = 0;
 
   private view: ViewState;
   private listeners = new Set<() => void>();
@@ -169,6 +183,12 @@ export class WorkbenchStore {
     readonly repository: Repository = new MemoryRepository(),
   ) {
     this.view = {
+      lineage: null,
+      lineageLoading: false,
+      lineageError: null,
+      lineageComparison: null,
+      lineageComparing: false,
+      lineageNotice: null,
       comparisons: [],
       comparisonId: null,
       comparing: false,
@@ -259,6 +279,7 @@ export class WorkbenchStore {
       replays: retained,
       bookmark: selected
         ? {
+            ...(selected.lineageId ? { lineageId: selected.lineageId } : {}),
             genome: selected.genome,
             generation: selected.generation,
             label: selected.label,
@@ -282,12 +303,28 @@ export class WorkbenchStore {
         })
       : this.makeSession();
   }
-  async exportFile() {
+  async exportFile(fullLineage = false) {
     if (this.view.storage.archiveBusy) return;
     this.storage({ archiveBusy: true });
     try {
-      const session = this.getExportSession(),
-        { exportCheckpoint } = await import("../persistence/archive-client"),
+      const session = this.getExportSession();
+      if (fullLineage) {
+        if (
+          !this.view.storage.id ||
+          this.pendingSave ||
+          this.saving ||
+          this.view.status?.training
+        )
+          throw new Error(
+            "Pause training and save the complete population before exporting lineage.",
+          );
+        session.lineage = await this.repository.exportLineage(
+          this.view.storage.id,
+          this.view.storage.revision,
+        );
+      }
+      const { exportCheckpoint } =
+          await import("../persistence/archive-client"),
         bytes = await exportCheckpoint(session),
         blob = new Blob([Uint8Array.from(bytes).buffer], {
           type: "application/zip",
@@ -295,7 +332,7 @@ export class WorkbenchStore {
         url = URL.createObjectURL(blob),
         link = document.createElement("a");
       link.href = url;
-      link.download = `${session.name.replace(/[^a-zA-Z0-9_-]+/g, "-")}-population-${session.checkpoint.generation}.evolab`;
+      link.download = `${session.name.replace(/[^a-zA-Z0-9_-]+/g, "-")}-${fullLineage ? "lineage" : "population"}-${session.checkpoint.generation}.evolab`;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (error) {
@@ -358,6 +395,8 @@ export class WorkbenchStore {
     this.activeSettings = session.settings;
     this.provenance = session.provenance;
     this.pendingSave = null;
+    this.ancestorReplay = null;
+    this.lineageWanted = null;
     this.unsavedComparisons.clear();
     this.replays = [...session.replays]
       .sort((a, b) => a.generation - b.generation)
@@ -372,6 +411,12 @@ export class WorkbenchStore {
     this.inspectFrame(true);
     this.update({
       name: session.name,
+      lineage: null,
+      lineageLoading: false,
+      lineageError: null,
+      lineageComparison: null,
+      lineageComparing: false,
+      lineageNotice: null,
       comparisons: session.comparisons ?? [],
       comparisonId: session.comparisons?.at(-1)?.id ?? null,
       comparing: false,
@@ -404,6 +449,10 @@ export class WorkbenchStore {
     });
     if (session.bookmark) {
       const { tick, ...selection } = session.bookmark;
+      if (selection.lineageId) {
+        await this.browseLineage(selection.lineageId);
+        this.ancestorReplay = this.view.lineage?.replay ?? null;
+      }
       await this.open(selection);
       if (tick !== 1) await this.playback("seek", tick);
     } else if (cp.generation === 0)
@@ -625,6 +674,10 @@ export class WorkbenchStore {
           : null,
       });
       await this.refreshLibrary();
+      const wanted = this.lineageWanted;
+      if (wanted) void this.browseLineage(wanted.genomeId, wanted.query);
+      else if (this.view.selection)
+        void this.browseLineage(this.view.selection.genome.id);
     } catch (error) {
       this.storage({
         state: error instanceof RevisionConflict ? "conflict" : "error",
@@ -692,12 +745,20 @@ export class WorkbenchStore {
         changes: [],
       };
       this.replays = [];
+      this.ancestorReplay = null;
+      this.lineageWanted = null;
       this.unsavedComparisons.clear();
       this.selectedReplay = null;
       this.frame = null;
       this.inspectFrame(true);
       this.update({
         name: this.activeSettings.name,
+        lineage: null,
+        lineageLoading: false,
+        lineageError: null,
+        lineageComparison: null,
+        lineageComparing: false,
+        lineageNotice: null,
         comparisons: [],
         comparisonId: null,
         comparing: false,
@@ -793,12 +854,17 @@ export class WorkbenchStore {
     }
   }
   private async open(value: Omit<Selection, "playbackId">) {
+    if (!value.lineageId) {
+      this.ancestorReplay = null;
+      this.ancestorRequest++;
+    }
     if (value.historyGeneration === null) this.selectedReplay = null;
     const serial = ++this.serial,
       selection = { ...value, playbackId: `workbench-${serial}` };
     this.frame = null;
     this.inspectFrame(true);
     this.update({ selection, loadingPlayback: true });
+    void this.browseLineage(selection.genome.id);
     for (const f of this.frameListeners) f();
     try {
       const reply = await this.client.request({
@@ -833,7 +899,12 @@ export class WorkbenchStore {
       this.update({ comparisonId: id });
   }
   async compareSensor(channel: number, replay?: SensorComparison) {
-    if (this.view.comparing || this.view.initializing) return;
+    if (
+      this.view.comparing ||
+      this.view.lineageComparing ||
+      this.view.initializing
+    )
+      return;
     const scope = this.requiredScope(),
       localId = this.view.storage.id;
     const selection = this.view.selection;
@@ -967,12 +1038,149 @@ export class WorkbenchStore {
     });
   }
   getTrialCount() {
+    if (
+      this.view.selection?.lineageId &&
+      this.ancestorReplay?.genome.id === this.view.selection.lineageId
+    )
+      return this.ancestorReplay.scenarios.length;
     const g = this.view.selection?.historyGeneration;
     return (
       (this.selectedReplay && this.selectedReplay.generation === g
         ? this.selectedReplay.scenarios.length
         : this.replays.find((r) => r.generation === g)?.scenarios.length) ?? 1
     );
+  }
+  async browseLineage(genomeId: string, query: LineageQuery = {}) {
+    this.lineageWanted = { genomeId, query };
+    const localId = this.view.storage.id,
+      scope = this.scope,
+      serial = ++this.lineageSerial;
+    if (!localId) {
+      this.update({
+        lineageError: "Save this experiment to browse retained lineage.",
+      });
+      return;
+    }
+    this.update({
+      lineageLoading: true,
+      lineageError: null,
+      ...(this.view.lineage?.genome.id !== genomeId
+        ? { lineageComparison: null, lineageNotice: null }
+        : {}),
+    });
+    try {
+      const lineage = await this.repository.lineage(localId, genomeId, query);
+      if (
+        serial === this.lineageSerial &&
+        scope === this.scope &&
+        !this.disposed
+      )
+        this.update({ lineage, lineageLoading: false });
+    } catch (error) {
+      if (
+        serial === this.lineageSerial &&
+        scope === this.scope &&
+        !this.disposed
+      )
+        this.update({
+          lineageLoading: false,
+          lineageError: `Lineage could not be loaded: ${String(error)}`,
+        });
+    }
+  }
+  async replayAncestor(genomeId: string, trial = 0) {
+    const request = ++this.ancestorRequest,
+      scope = this.scope;
+    this.update({ loadingPlayback: true });
+    try {
+      if (this.view.lineage?.genome.id !== genomeId)
+        await this.browseLineage(genomeId);
+      if (
+        request !== this.ancestorRequest ||
+        scope !== this.scope ||
+        this.disposed
+      )
+        return;
+      const view = this.view.lineage;
+      if (!view || view.genome.id !== genomeId || !this.checkpoint) return;
+      const replay = view.replay,
+        scenario =
+          replay?.scenarios[trial] ??
+          this.view.selection?.scenario ??
+          firstScenario(this.checkpoint.definition);
+      this.ancestorReplay = replay;
+      await this.open({
+        genome: view.genome,
+        generation: replay?.generation ?? this.checkpoint.generation,
+        label: `Retained controller · born ${view.genome.birthGeneration}`,
+        scenario,
+        trial: replay ? trial : 0,
+        recordedResult: replay?.results[trial] ?? null,
+        historyGeneration: null,
+        lineageId: genomeId,
+      });
+    } finally {
+      if (
+        request === this.ancestorRequest &&
+        scope === this.scope &&
+        !this.disposed
+      )
+        this.update({ loadingPlayback: false });
+    }
+  }
+  async compareLineage(suite: "selected" | "recorded") {
+    const view = this.view.lineage;
+    if (
+      !view?.parent ||
+      this.view.comparing ||
+      this.view.lineageComparing ||
+      this.view.initializing
+    )
+      return;
+    const scope = this.requiredScope(),
+      genomeId = view.genome.id;
+    const scenarios =
+      suite === "recorded"
+        ? view.replay?.scenarios
+        : this.view.selection
+          ? [this.view.selection.scenario]
+          : undefined;
+    if (!scenarios?.length) {
+      this.update({ lineageNotice: "Choose an available comparison map." });
+      return;
+    }
+    this.update({
+      lineageComparing: true,
+      lineageNotice: "Evaluating both controllers on the shared maps…",
+    });
+    try {
+      const reply = await this.client.request({
+        type: "compareControllers",
+        ...scope,
+        parent: view.parent,
+        child: view.genome,
+        scenarios,
+      });
+      if (
+        scope !== this.scope ||
+        this.disposed ||
+        this.view.lineage?.genome.id !== genomeId
+      )
+        return;
+      if (reply.type !== "controllerComparison")
+        throw new Error("Unexpected parent/child comparison reply");
+      this.update({
+        lineageComparison: reply.comparison,
+        lineageNotice:
+          "Comparison complete. Both controllers used the same maps and initial body state.",
+      });
+    } catch (error) {
+      if (scope === this.scope && !this.disposed)
+        this.update({ lineageNotice: `Comparison failed: ${String(error)}` });
+    } finally {
+      if (scope === this.scope && !this.disposed)
+        this.update({ lineageComparing: false });
+    }
   }
   async playback(
     action: "toggle" | "pause" | "tick" | "decision" | "seek",

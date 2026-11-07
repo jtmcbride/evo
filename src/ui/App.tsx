@@ -6,6 +6,7 @@ import { Storage } from "./experiments/Storage";
 import { Training } from "./experiments/Training";
 import { History } from "./experiments/History";
 import { Comparison } from "./experiments/Comparison";
+import { Lineage } from "./experiments/Lineage";
 import { Arena } from "./arena/Arena";
 import { Inspector } from "./inspector/Inspector";
 import "./styles.css";
@@ -111,6 +112,7 @@ export function App({ store }: { store: WorkbenchStore }) {
         <Inspector store={store} />
         <History store={store} />
       </main>
+      <Lineage store={store} />
       <Comparison store={store} />
       <footer className="app-footer">
         <span>

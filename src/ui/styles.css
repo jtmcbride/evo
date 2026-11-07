@@ -19,6 +19,233 @@
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --display: "Avenir Next", "Trebuchet MS", sans-serif;
 }
+.lineage-panel {
+  padding: 24px;
+  margin-top: 20px;
+}
+.lineage-lookup {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+.lineage-lookup label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 260px;
+  max-width: 500px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.lineage-lookup input {
+  width: 100%;
+  min-width: 0;
+}
+.lineage-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.lineage-intro {
+  max-width: 85ch;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.lineage-coverage {
+  padding: 10px 12px;
+  background: var(--paper);
+  color: var(--muted);
+  font: 12px var(--mono);
+  line-height: 1.6;
+}
+.lineage-family {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(280px, 2fr) minmax(
+      160px,
+      1fr
+    );
+  gap: 20px;
+  align-items: start;
+  margin: 24px 0;
+}
+.lineage-family h3 {
+  margin: 0 0 12px;
+  font: 650 15px var(--display);
+}
+.lineage-relatives h3 span {
+  color: var(--muted);
+  font: 12px var(--mono);
+}
+.lineage-family code,
+.lineage-pair-context,
+.lineage-caption {
+  overflow-wrap: anywhere;
+}
+.lineage-relatives ol {
+  margin: 0 0 12px 5px;
+  padding: 0 0 0 13px;
+  list-style: none;
+  border-left: 2px solid var(--line);
+}
+.lineage-relatives li {
+  position: relative;
+  margin: 0 0 8px;
+}
+.lineage-relatives li::before {
+  content: "";
+  position: absolute;
+  left: -15px;
+  top: 19px;
+  width: 14px;
+  border-top: 2px solid var(--line);
+}
+.lineage-relatives li button {
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+}
+.lineage-relatives li span {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.lineage-relatives li code {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.lineage-selected {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--blue);
+  border-radius: 6px;
+}
+.lineage-selected > code {
+  display: block;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.lineage-origin {
+  display: inline-block;
+  background: #eaf1fe;
+  color: #2541a4;
+  padding: 5px 8px;
+  border-radius: 5px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.lineage-caption,
+.lineage-relatives > p {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 12px;
+}
+.lineage-error {
+  padding: 10px 12px;
+  background: #fff4e8;
+  color: #764615;
+  overflow-wrap: anywhere;
+}
+.lineage-mutations {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+}
+.lineage-mutations summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 12px 0;
+}
+.lineage-table-scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+.lineage-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.lineage-panel td,
+.lineage-panel th {
+  padding: 9px 7px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+.lineage-panel th:first-child {
+  text-align: left;
+}
+.lineage-panel td {
+  font: 11px var(--mono);
+}
+.lineage-panel thead {
+  color: var(--muted);
+}
+.lineage-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lineage-pages button {
+  font-size: 11px;
+}
+.lineage-compare-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+.lineage-compare-controls label,
+.lineage-trial {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 0;
+}
+.lineage-pair {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.lineage-pair > p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.lineage-trial {
+  margin: 18px 0;
+  max-width: 300px;
+}
+@media (max-width: 760px) {
+  .lineage-panel {
+    padding: 16px;
+  }
+  .lineage-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .lineage-family {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lineage-compare-controls {
+    align-items: stretch;
+  }
+  .lineage-compare-controls label,
+  .lineage-compare-controls select {
+    width: 100%;
+    min-width: 0;
+  }
+}
 .comparison-panel {
   margin: 20px 0 0;
   padding: 24px;

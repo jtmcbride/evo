@@ -1,75 +1,10 @@
 import { memo, useState } from "react";
-import type { ComparisonArm, SensorComparison } from "../../core/comparison";
+import type { SensorComparison } from "../../core/comparison";
 import type { WorkbenchStore } from "../store";
 import { useView, useInspection } from "../hooks";
 import { INPUT_LABELS } from "../inspector/network";
+import { Trajectory } from "../arena/Trajectory";
 
-function Trajectory({
-  record,
-  arm,
-  label,
-}: {
-  record: SensorComparison;
-  arm: ComparisonArm;
-  label: string;
-}) {
-  const s = record.source.definition.scenario,
-    first = arm.trajectory[0],
-    last = arm.trajectory.at(-1)!;
-  return (
-    <figure className="comparison-trajectory">
-      <figcaption>
-        {label}
-        <span>
-          {arm.result.foodCollected} food · {arm.result.terminalReason}
-        </span>
-      </figcaption>
-      <svg
-        viewBox={`0 0 ${s.config.width} ${s.config.height}`}
-        role="img"
-        aria-label={`${label} trajectory from tick ${record.intervention.startTick} to ${last.tick}`}
-      >
-        {s.obstacles.map((o) => (
-          <rect
-            key={o.id}
-            x={o.x}
-            y={o.y}
-            width={o.width}
-            height={o.height}
-            className="comparison-obstacle"
-          />
-        ))}
-        {s.food
-          .filter((_, i) => record.source.state.remaining[i])
-          .map((f) => (
-            <circle
-              key={f.id}
-              cx={f.x}
-              cy={f.y}
-              r={s.config.foodRadius}
-              className="comparison-food"
-            />
-          ))}
-        <polyline
-          points={arm.trajectory.map((p) => `${p.x},${p.y}`).join(" ")}
-          className="comparison-path"
-        />
-        <circle
-          cx={first.x}
-          cy={first.y}
-          r={s.config.bodyRadius}
-          className="comparison-start"
-        />
-        <circle
-          cx={last.x}
-          cy={last.y}
-          r={s.config.bodyRadius}
-          className="comparison-end"
-        />
-      </svg>
-    </figure>
-  );
-}
 const number = (v: number) => v.toFixed(4);
 function Outcomes({ record }: { record: SensorComparison }) {
   const a = record.control,
@@ -104,12 +39,14 @@ function Outcomes({ record }: { record: SensorComparison }) {
       </p>
       <div className="comparison-paths">
         <Trajectory
-          record={record}
+          scenario={record.source.definition.scenario}
+          remaining={record.source.state.remaining}
           arm={a}
           label="Control · original observations"
         />
         <Trajectory
-          record={record}
+          scenario={record.source.definition.scenario}
+          remaining={record.source.state.remaining}
           arm={b}
           label={`Masked · ${INPUT_LABELS[channel]}`}
         />
@@ -236,7 +173,8 @@ export function Comparison({ store }: { store: WorkbenchStore }) {
     !v.status?.playing &&
     !v.status?.seeking &&
     !frame.state.terminal &&
-    !v.comparing;
+    !v.comparing &&
+    !v.lineageComparing;
   return (
     <section
       className="panel comparison-panel"
@@ -318,7 +256,9 @@ export function Comparison({ store }: { store: WorkbenchStore }) {
               </select>
             </label>
             <button
-              disabled={v.comparing || v.initializing || v.failed}
+              disabled={
+                v.comparing || v.lineageComparing || v.initializing || v.failed
+              }
               onClick={() =>
                 void store.compareSensor(record.intervention.channel, record)
               }

@@ -1,7 +1,11 @@
 import { test, expect } from "vitest";
 import { SimulationRuntime } from "../../src/runtime/runtime";
 import type { CommandBody, RuntimeEvent } from "../../src/runtime/protocol";
-import { defineExperiment, initialCheckpoint } from "../../src/core/evolution";
+import {
+  defineExperiment,
+  initialCheckpoint,
+  reproduce,
+} from "../../src/core/evolution";
 import { ExperimentRunner } from "../../src/core/experiment";
 import { generateScenario } from "../../src/core/world/scenario";
 import { createEpisode } from "../../src/core/episode";
@@ -61,6 +65,55 @@ function setup() {
 function commits(events: RuntimeEvent[]) {
   return events.filter((e) => e.type === "generationCommit");
 }
+test("parent/child suites leave training identical and settle replacement and cancellation", () => {
+  const h = setup(),
+    baseline = new ExperimentRunner(h.checkpoint);
+  while (baseline.phase !== "awaitingCommit") baseline.advance(10000);
+  const child = reproduce(
+      h.checkpoint,
+      h.checkpoint.population.map(() => 0),
+    ).find((g) => g.origin === "mutation")!,
+    parent = h.checkpoint.population.find((g) => g.id === child.parentIds[0])!;
+  const command = {
+    type: "compareControllers" as const,
+    ...h.scope,
+    parent,
+    child,
+    scenarios: [h.playback.scenario],
+  };
+  const request = h.send(command);
+  h.send({ type: "startTraining", ...h.scope, generations: 1 });
+  h.until(
+    () =>
+      commits(h.events).length === 1 &&
+      h.events.some((e) => e.type === "reply" && e.requestId === request),
+  );
+  expect(commits(h.events)[0].commit).toEqual(baseline.pendingCommit());
+  const reply = h.events.find(
+    (e) => e.type === "reply" && e.requestId === request,
+  );
+  expect(
+    reply?.type === "reply" &&
+      reply.data.type === "controllerComparison" &&
+      reply.data.comparison.trials[0].parent.firstDecision.tick,
+  ).toBe(0);
+  const old = h.send(command);
+  h.send(command);
+  expect(
+    h.events.some(
+      (e) =>
+        e.type === "error" && e.requestId === old && e.code === "CANCELLED",
+    ),
+  ).toBe(true);
+  const cancel = h.send(command);
+  h.send({ type: "cancelRequest", targetRequestId: cancel });
+  expect(
+    h.events.some(
+      (e) =>
+        e.type === "error" && e.requestId === cancel && e.code === "CANCELLED",
+    ),
+  ).toBe(true);
+});
 test("training matches core with independent inspection, stepping and seeking", () => {
   const h = setup(),
     baseline = new ExperimentRunner(h.checkpoint);

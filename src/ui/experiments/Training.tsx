@@ -57,6 +57,7 @@ export function Training({ store }: { store: WorkbenchStore }) {
             v.failed ||
             v.storage.blocked ||
             v.storage.state === "saving" ||
+            (!status?.training && v.storage.archiveBusy) ||
             !Number.isInteger(batch) ||
             batch < 1 ||
             batch > 100

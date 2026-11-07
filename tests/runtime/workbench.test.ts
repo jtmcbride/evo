@@ -50,6 +50,74 @@ test("draft validation and preview use actual first-training conditions", () => 
     prepare({ ...settings, elites: 100, immigrants: 100 }),
   ).toThrow();
 });
+test("retired ancestors replay original trials and matched parent suites after saved bookmark recovery", async () => {
+  const transport = new Transport(),
+    store = new WorkbenchStore(
+      new SimulationClient(transport as unknown as Worker),
+    );
+  const pump = async (check: () => boolean) => {
+    for (let i = 0; i < 500 && !check(); i++) {
+      transport.runtime.pump();
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    expect(check()).toBe(true);
+  };
+  try {
+    await store.ready;
+    store.updateDraft({ population: 16, seconds: 5, seed: "retired" });
+    await store.create();
+    await store.train(3);
+    await pump(
+      () =>
+        store.getView().history.length === 3 &&
+        store.getView().storage.state === "saved",
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    const snapshot = store.getExportSession(),
+      local = store.getView().storage;
+    const all = await store.repository.exportLineage(local.id!, local.revision),
+      retired = all.nodes.find(
+        (n) =>
+          n.genome.origin === "mutation" &&
+          n.genome.birthGeneration < 3 &&
+          !snapshot.checkpoint.population.some((g) => g.id === n.genome.id),
+      )!.genome;
+    await store.browseLineage(retired.id);
+    const family = store.getView().lineage!;
+    expect(family.parent).not.toBeNull();
+    expect(family.replay).not.toBeNull();
+    await store.replayAncestor(retired.id, 1);
+    expect(store.getView().selection?.lineageId).toBe(retired.id);
+    expect(store.getTrialCount()).toBe(3);
+    const seek = store.playback("seek", 150);
+    await new Promise((r) => setTimeout(r, 0));
+    await pump(() => !transport.runtime.status().seeking);
+    await seek;
+    expect(store.getInspection()?.result).toEqual(family.replay!.results[1]);
+    const compare = store.compareLineage("recorded");
+    await pump(() => !store.getView().lineageComparing);
+    await compare;
+    expect(
+      store.getView().lineageComparison!.trials.map((t) => t.child.result),
+    ).toEqual(family.replay!.results);
+    expect(store.getExportSession().checkpoint).toEqual(snapshot.checkpoint);
+    await store.retrySave();
+    let loaded = false;
+    const loading = store.loadSaved(local.id!).then(() => {
+      loaded = true;
+    });
+    await pump(() => loaded);
+    await loading;
+    expect(store.getView().selection?.lineageId).toBe(retired.id);
+    expect(store.getTrialCount()).toBe(3);
+    expect(store.getInspection()?.result).toEqual(family.replay!.results[1]);
+    await store.browseLineage("missing-controller");
+    expect(store.getView().lineageError).toMatch(/Missing/);
+    expect(store.getView().storage.blocked).toBe(false);
+  } finally {
+    store.dispose();
+  }
+});
 test("comparison save failures retain exportable results, retry separately, and restore after loading", async () => {
   const { MemoryRepository } = await import("../../src/persistence/repository");
   class Faulty extends MemoryRepository {

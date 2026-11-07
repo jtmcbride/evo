@@ -39,3 +39,11 @@ Added matched sensor-mask comparisons from exact episode checkpoints. Non-decisi
 Comparison records save independently of numerical checkpoint revisions and survive concurrent training saves. Database schema 2 preserves existing M6 heads/checksums; archive version 2 includes comparison-only parameters and accepts M6 version-1 imports. Save failures retain exportable results with a separate retry, and retention is explicitly bounded at 32 pairs per experiment.
 
 Fifty-four engine/runtime/store/database/archive tests and twenty-three production Chromium browser tests pass, along with typecheck, lint, build, and automated desktop/mobile WCAG A/AA acceptance. See [sensor intervention semantics and acceptance](interventions.md). M8 retained ancestry is next; hidden-neuron clamps, branches, full-history archives, broader browser/device acceptance, and static deployment remain later work.
+
+**M8 complete**
+
+Added immutable birth retention, sparse mutation patches, periodic/depth-bounded reconstruction anchors, and exact ancestral parameter reconstruction. All saved births survive removal from the current population. Generation saves now commit lineage, original trials, and the next population together; failed writes roll back births and successful retries remain idempotent. Legacy M6/M7 records backfill without rewriting numerical checkpoints.
+
+The lineage explorer shows bounded ancestor/child pages, controller lookup, exact mutation values, and replay of original retained trials. Parent and child can be evaluated on an explicit common map suite with paired trajectories and outcomes, independently of training. Version-3 full-lineage archives preserve retained births, generation membership, scenarios, trial results, and reconstruction data; older checkpoint imports remain compatible and honestly partial.
+
+Sixty-five engine/runtime/store/database/archive tests and twenty-six production Chromium browser tests pass, with typecheck, lint, build, and automated desktop/mobile accessibility acceptance. Full archive import in a fresh browser reproduces ancestor replay, shared-suite outcomes/paths, and subsequent evolution. See [lineage semantics and acceptance](lineage.md). M9 branches and extended interventions are next; static publication and release benchmarks remain M10.

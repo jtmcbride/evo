@@ -219,15 +219,20 @@ export function Arena({
             aria-label="Selected training trial"
             value={selection?.trial ?? 0}
             disabled={
-              selection?.historyGeneration === null ||
+              (selection?.historyGeneration === null && !selection.lineageId) ||
               !selection ||
               v.loadingPlayback
             }
             onChange={(e) =>
-              void store.selectChampion(
-                selection!.historyGeneration!,
-                Number(e.target.value),
-              )
+              void (selection!.lineageId
+                ? store.replayAncestor(
+                    selection!.lineageId,
+                    Number(e.target.value),
+                  )
+                : store.selectChampion(
+                    selection!.historyGeneration!,
+                    Number(e.target.value),
+                  ))
             }
           >
             {Array.from({ length: store.getTrialCount() }, (_, i) => (

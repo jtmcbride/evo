@@ -1,4 +1,4 @@
-**M5–M7 interactive workbench**
+**M5–M8 interactive workbench**
 
 The main application is now a working neuroevolution workbench. Run `npm run dev` and open the local URL. The separate `runtime.html` diagnostic page remains available from the header.
 
@@ -36,3 +36,5 @@ Verification on pinned Chromium against the production build under `/evo/`:
 - 12 browser tests pass across M4 and M5. Workbench coverage includes create/train/history selection, exact agreement of all 20 input readings and hidden activity with a reference decision, filtering and keyboard selection, deterministic results during presentation changes, invalid-draft recovery, mobile layout without horizontal overflow, keyboard playback, fixed validation, and rewinding completed episodes.
 - Axe reports no automated WCAG A/AA violations across Brain, Sensors, and Measures at 1280 px and 390 px widths. This is automated evidence, not a complete accessibility conformance audit.
 - Typecheck, lint, and the production build pass. Desktop and mobile screenshots were visually inspected. Broader browser/device acceptance and scientific benchmarks remain release work.
+
+M8 adds a paginated **Controller lineage** panel. Browse ancestors and children, find a retained controller by ID, inspect exact parent/child mutation values, and replay recorded trials. Shared-suite comparisons evaluate both controllers afresh on identical maps. Full lineage exports include all retained births and generation records. See [lineage behavior and acceptance](lineage.md).

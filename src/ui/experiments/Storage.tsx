@@ -63,6 +63,19 @@ export function Storage({ store }: { store: WorkbenchStore }) {
           {s.archiveBusy ? "Working…" : "Export checkpoint"}
         </button>
         <button
+          disabled={
+            busy ||
+            !s.id ||
+            s.state !== "saved" ||
+            s.blocked ||
+            !!v.status?.training
+          }
+          onClick={() => void store.exportFile(true)}
+          title="Export every retained birth, its ancestry, and recorded generation trials. Pause training and save first."
+        >
+          Export full lineage
+        </button>
+        <button
           disabled={busy || !!v.status?.training || v.failed}
           onClick={() => input.current?.click()}
         >

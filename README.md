@@ -1,6 +1,6 @@
 **Evolution Lab**
 
-A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M7 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser workbench includes seeded setup, training controls, Canvas playback, an inspectable neural graph, sensor readings, measurements, and training/validation history. Historical champions replay their original trials. Matched sensor interventions compare an unchanged control episode against a one-input mask, with saved outcomes and portable replay.
+A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M8 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser workbench includes seeded setup, training controls, Canvas playback, an inspectable neural graph, sensor readings, measurements, and training/validation history. Historical champions replay their original trials. Matched sensor interventions compare an unchanged control episode against a one-input mask, with saved outcomes and portable replay.
 
 Use Node 24.18.0 and the committed npm lockfile:
 
@@ -59,3 +59,5 @@ The main workbench is available at the root URL from `npm run dev`. Configure a 
 The save indicator exposes retry and stale-tab recovery. Failed writes pause training with the pending complete population available for export; they do not advance the saved head. Browser storage can be cleared, so keep exported files as independent backups. [Persistence and archive documentation](docs/persistence.md) describes limits, runtime compatibility, and verified failure cases.
 
 Pause a selected trial and use **Sensor intervention** to mask one of its 20 inputs at the next decision. Compare paths, food, contact time, survival, and motor commands, then replay the saved pair after reload or archive import. Comparisons preserve the original controller and training population. [The intervention guide](docs/interventions.md) explains decision timing, saved sources, and interpretation.
+
+The **Controller lineage** panel retains ancestors and unsuccessful descendants, displays exact mutation values, and replays original recorded trials. Compare parent and child on shared maps. Use **Export full lineage** to preserve all retained births and generation trials; ordinary checkpoint exports remain smaller, partial-history backups. [The lineage guide](docs/lineage.md) describes reconstruction, bounded navigation, migration, and verified archive replay.
