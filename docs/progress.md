@@ -55,3 +55,7 @@ Added branches from saved ready-to-evaluate populations, immutable source proven
 Added post-tanh hidden-neuron clamps and actual reconstructed parent-weight restoration to matched replay, with raw/effective activity, exact decision timing, immutable genomes, and saved comparison replay. Training-selected source/branch champions now evaluate across both original and modified environment suites in a complete common-suite matrix. Matrix records persist independently, survive failed saves and generation commits, and replay after fresh-context import.
 
 Seventy-seven engine/runtime/store/database/archive tests and thirty production Chromium tests pass, with typecheck, lint, build, and desktop/mobile accessibility acceptance. See [controlled branches, matrices, and interventions](branches.md). M10 release benchmarks, examples, broader browser acceptance, and static publication remain.
+
+**M10 public-preview setup (partial)**
+
+Connected the public `jtmcbride/evo` repository and enabled GitHub Actions Pages publication with HTTPS. Added a workflow that gates deployment on typecheck, lint, the engine/runtime/store/archive suite, and production Chromium acceptance under `/evo/`. Pull requests verify without deploying; successful `main` builds publish the static app and workers. See [publication setup](publication.md). A bounded three-run, ten-generation pilot follows the initial push; the frozen benchmark, bundled examples, and Firefox/WebKit acceptance remain pending.

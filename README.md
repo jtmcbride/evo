@@ -1,5 +1,7 @@
 **Evolution Lab**
 
+[Open the public workbench](https://jmcbride.site/evo/) · [Publication and local verification](docs/publication.md)
+
 A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M9 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser workbench includes seeded setup, training controls, Canvas playback, an inspectable neural graph, sensor readings, measurements, and training/validation history. Historical champions replay their original trials. Matched sensor interventions compare an unchanged control episode against a one-input mask, with saved outcomes and portable replay.
 
 Use Node 24.18.0 and the committed npm lockfile:
