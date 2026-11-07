@@ -129,3 +129,108 @@ test("a selected champion keeps its trial choices when older history is evicted"
     store.dispose();
   }
 }, 15000);
+
+test("failed or unacknowledged saves retain an exportable population and retry once", async () => {
+  const { MemoryRepository } = await import("../../src/persistence/repository");
+  for (const afterWrite of [false, true]) {
+    class Faulty extends MemoryRepository {
+      fail = true;
+      override async save(
+        ...args: Parameters<InstanceType<typeof MemoryRepository>["save"]>
+      ) {
+        if (this.fail && args[3]) {
+          this.fail = false;
+          if (afterWrite) await super.save(...args);
+          throw new DOMException(
+            "Injected quota or lost result",
+            "QuotaExceededError",
+          );
+        }
+        return super.save(...args);
+      }
+    }
+    const repo = new Faulty(),
+      transport = new Transport(),
+      client = new SimulationClient(transport as unknown as Worker),
+      store = new WorkbenchStore(client, repo);
+    try {
+      await store.ready;
+      store.updateDraft({ population: 16, seconds: 5 });
+      await store.create();
+      await store.train(1);
+      for (
+        let i = 0;
+        i < 200 && store.getView().storage.state !== "error";
+        i++
+      ) {
+        transport.runtime.pump();
+        await new Promise((r) => setTimeout(r, 0));
+      }
+      expect(store.getView().storage.blocked).toBe(true);
+      expect(store.getExportSession().checkpoint.generation).toBe(1);
+      expect(transport.runtime.status().generation).toBe(0);
+      await store.retrySave();
+      expect(store.getView().history).toHaveLength(1);
+      expect(transport.runtime.status().generation).toBe(1);
+      expect(
+        (await repo.load(store.getView().storage.id!)).entry.generation,
+      ).toBe(1);
+    } finally {
+      store.dispose();
+    }
+  }
+});
+
+test("a fast next generation is saved even while the previous library refresh is pending", async () => {
+  const { MemoryRepository } = await import("../../src/persistence/repository");
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  class Slow extends MemoryRepository {
+    hold = false;
+    waiting = false;
+    override async list() {
+      if (this.hold) {
+        this.hold = false;
+        this.waiting = true;
+        await gate;
+      }
+      return super.list();
+    }
+    override async save(
+      ...args: Parameters<InstanceType<typeof MemoryRepository>["save"]>
+    ) {
+      const result = await super.save(...args);
+      if (args[3]?.record.generation === 0) this.hold = true;
+      return result;
+    }
+  }
+  const repo = new Slow(),
+    transport = new Transport(),
+    client = new SimulationClient(transport as unknown as Worker),
+    store = new WorkbenchStore(client, repo);
+  try {
+    await store.ready;
+    store.updateDraft({ population: 16, seconds: 5 });
+    await store.create();
+    await store.train(3);
+    for (
+      let i = 0;
+      i < 200 &&
+      !(repo.waiting && transport.runtime.status().phase === "awaitingCommit");
+      i++
+    ) {
+      transport.runtime.pump();
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    expect(repo.waiting).toBe(true);
+    release();
+    for (let i = 0; i < 200 && store.getView().history.length < 3; i++) {
+      transport.runtime.pump();
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    expect(store.getView().history).toHaveLength(3);
+  } finally {
+    release();
+    store.dispose();
+  }
+});

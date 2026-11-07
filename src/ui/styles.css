@@ -1251,3 +1251,21 @@ td {
     font-size: 10px;
   }
 }
+.archive-actions {
+  display: flex;
+  gap: 8px;
+}
+.archive-actions button {
+  font-size: 10px;
+}
+.storage-bar .archive-actions input[hidden] {
+  display: none;
+}
+@media (max-width: 760px) {
+  .archive-actions {
+    width: 100%;
+  }
+  .archive-actions button {
+    flex: 1;
+  }
+}

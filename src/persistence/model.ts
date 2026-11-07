@@ -321,6 +321,18 @@ function validateGenome(g: Genome) {
   if (g.parameterHash !== parameterHash(g.parameters))
     throw new Error("Parameter checksum mismatch");
   if (
+    g.origin === "mutation"
+      ? g.parentIds.length !== 1
+      : g.parentIds.length !== 0
+  )
+    throw new Error("Invalid genome ancestry");
+  if (
+    g.mutation?.changes.some(
+      (change) => !Object.is(change.value, g.parameters[change.index]),
+    )
+  )
+    throw new Error("Mutation patch does not match its genome");
+  if (
     g.mutation &&
     new Set(g.mutation.changes.map((c) => c.index)).size !==
       g.mutation.changes.length
@@ -336,6 +348,8 @@ function validateResult(r: TrialResult, g: Genome, s: Scenario) {
     r.spec.controllerId !== g.id ||
     r.spec.controllerVersion !== g.parameterHash ||
     r.foodCollected !== r.score ||
+    r.foodCollected > s.food.length ||
+    r.survivalTicks < 1 ||
     r.contactTicks > r.survivalTicks ||
     r.survivalTicks > s.config.maxTicks ||
     r.remainingEnergy > s.config.maxEnergy
@@ -352,8 +366,18 @@ export function parseSession(value: unknown): SavedSession {
     throw new Error(
       `Unsupported engine version: ${String(value.engineVersion)}`,
     );
-  const s = schema.parse(value) as SavedSession;
+  const parsed = schema.safeParse(value);
+  if (!parsed.success)
+    throw new Error(
+      "Invalid checkpoint: " +
+        parsed.error.issues
+          .slice(0, 3)
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
+    );
+  const s = parsed.data as SavedSession;
   validateCheckpoint(s.checkpoint);
+  s.checkpoint.population.forEach(validateGenome);
   const c = s.checkpoint,
     def = c.definition,
     config = s.settings;
@@ -372,7 +396,15 @@ export function parseSession(value: unknown): SavedSession {
   )
     throw new Error("Saved settings do not match the checkpoint");
   const seen = new Set<number>();
+  let lastGeneration = -1;
   for (const h of s.history) {
+    if (
+      h.generation <= lastGeneration ||
+      h.median > h.best ||
+      h.best > def.world.foodCount
+    )
+      throw new Error("Invalid generation measurements");
+    lastGeneration = h.generation;
     if (h.generation >= c.generation || seen.has(h.generation))
       throw new Error("Invalid generation history");
     seen.add(h.generation);
@@ -387,6 +419,16 @@ export function parseSession(value: unknown): SavedSession {
       throw new Error("Invalid replay");
     replayIds.add(r.generation);
     validateGenome(r.genome);
+    if (r.genome.birthGeneration > r.generation)
+      throw new Error("Invalid replay birth generation");
+    const summary = s.history.find((h) => h.generation === r.generation);
+    if (
+      summary &&
+      (summary.championId !== r.genome.id ||
+        summary.best !==
+          r.results.reduce((sum, t) => sum + t.score, 0) / r.results.length)
+    )
+      throw new Error("Replay does not match its generation summary");
     r.scenarios.forEach((world, i) => {
       validateScenario(world);
       validateResult(r.results[i], r.genome, world);
@@ -394,6 +436,13 @@ export function parseSession(value: unknown): SavedSession {
   }
   if (s.bookmark) {
     validateGenome(s.bookmark.genome);
+    if (
+      s.bookmark.genome.birthGeneration > s.bookmark.generation ||
+      s.bookmark.generation > c.generation ||
+      (s.bookmark.historyGeneration !== null &&
+        s.bookmark.historyGeneration !== s.bookmark.generation)
+    )
+      throw new Error("Invalid bookmark generation");
     validateScenario(s.bookmark.scenario);
     if (s.bookmark.tick > s.bookmark.scenario.config.maxTicks)
       throw new Error("Invalid playback bookmark");

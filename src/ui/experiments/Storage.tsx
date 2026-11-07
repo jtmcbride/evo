@@ -1,7 +1,9 @@
+import { useRef } from "react";
 import { useView } from "../hooks";
 import type { WorkbenchStore } from "../store";
 import { ENGINE_VERSION } from "../../core/model";
 export function Storage({ store }: { store: WorkbenchStore }) {
+  const input = useRef<HTMLInputElement>(null);
   const v = useView(store),
     s = v.storage,
     busy = !v.ready || v.initializing || s.state === "saving" || s.archiveBusy;
@@ -52,6 +54,33 @@ export function Storage({ store }: { store: WorkbenchStore }) {
           ))}
         </select>
       </label>
+      <div className="archive-actions">
+        <button
+          disabled={s.archiveBusy || !v.definition || v.initializing}
+          onClick={() => void store.exportFile()}
+          title="Export the latest complete population, including a pending unsaved generation. A partial active generation is excluded."
+        >
+          {s.archiveBusy ? "Working…" : "Export checkpoint"}
+        </button>
+        <button
+          disabled={busy || !!v.status?.training || v.failed}
+          onClick={() => input.current?.click()}
+        >
+          Import checkpoint
+        </button>
+        <input
+          ref={input}
+          type="file"
+          accept=".evolab,application/zip"
+          aria-label="Checkpoint archive"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) void store.importFile(file);
+          }}
+        />
+      </div>
       {s.notice ? <p className="storage-notice">{s.notice}</p> : null}
       {(s.state === "error" || s.state === "conflict") && v.definition ? (
         <div className="storage-recovery">

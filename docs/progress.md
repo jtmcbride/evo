@@ -29,3 +29,7 @@ Thirty-five engine/runtime/store tests and twelve production Chromium tests pass
 **M6 durable-save foundation**
 
 Added versioned IndexedDB storage for experiment heads, population checkpoints, genomes/parameters, memberships, scenarios, evaluations, trials, and generation records. Generations are saved atomically before worker acknowledgment, with idempotent retries and revision guards. Reload recovers the active saved population paused, including retained champion replays and bookmark state; interrupted training is identified for rerun. Thirty-eight engine/runtime/store/database tests, typecheck and lint pass, plus production browser reload and interrupted-generation checks. Portable archives and save-failure recovery acceptance are the next stage.
+
+**M6 portable-checkpoint stage**
+
+Added `.evolab` ZIP checkpoints with versioned manifests, per-entry SHA-256 checksums, explicit little-endian Float32 parameter files, retained replay/history metadata, and runtime provenance. A separate archive worker keeps compression/validation off the simulation and UI threads. Imports are validated before an atomic new local save is exposed. Size, count, path, parameter/reference, and streaming expansion limits reject damaged or oversized data. Forty-four tests, typecheck and lint pass; real browser download/import into a fresh context preserves continuation, and invalid imports preserve the existing experiment. Save-response loss and fast-generation save-queue races are covered. Browser quota/conflict acceptance and final documentation remain.

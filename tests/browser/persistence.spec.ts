@@ -96,3 +96,86 @@ test("an interrupted generation recovers paused at the previous durable populati
     page.getByRole("button", { name: "Pause training", exact: true }),
   ).toHaveCount(0);
 });
+
+test("portable export/import creates a separate save and continues the same population", async ({
+  page,
+  browser,
+}, info) => {
+  await study(page, "m6-archive");
+  await train(page, 1);
+  await expect(page.locator(".save-status strong")).toHaveText(
+    "Saved population 1",
+  );
+  const pendingDownload = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export checkpoint", exact: true })
+    .click();
+  const download = await pendingDownload,
+    path = info.outputPath("checkpoint.evolab");
+  await download.saveAs(path);
+  const sourceId = await page
+    .getByLabel("Saved experiments", { exact: true })
+    .inputValue();
+  await page
+    .getByLabel("Checkpoint archive", { exact: true })
+    .setInputFiles(path);
+  await expect(
+    page.getByLabel("Saved experiments", { exact: true }).locator("option"),
+  ).toHaveCount(3);
+  expect(
+    await page.getByLabel("Saved experiments", { exact: true }).inputValue(),
+  ).not.toBe(sourceId);
+  const context = await browser.newContext(),
+    imported = await context.newPage();
+  try {
+    await imported.goto("http://127.0.0.1:4173/evo/");
+    await expect(
+      imported.getByRole("button", { name: "Import checkpoint", exact: true }),
+    ).toBeEnabled();
+    await imported
+      .getByLabel("Checkpoint archive", { exact: true })
+      .setInputFiles(path);
+    await expect(imported.locator(".save-status strong")).toHaveText(
+      "Saved population 1",
+    );
+    await train(imported, 1);
+    await expect(
+      imported.getByRole("button", { name: /Generation 1 champion/ }),
+    ).toBeVisible();
+    const actual = await imported
+      .getByRole("button", { name: /Generation 1 champion/ })
+      .getAttribute("data-commit-id");
+    await train(page, 1);
+    await expect(
+      page.getByRole("button", { name: /Generation 1 champion/ }),
+    ).toHaveAttribute("data-commit-id", actual!);
+  } finally {
+    await context.close();
+  }
+});
+
+test("an invalid import leaves the current experiment and saved library intact", async ({
+  page,
+}) => {
+  await study(page, "m6-bad-import");
+  const selected = await page
+    .getByLabel("Saved experiments", { exact: true })
+    .inputValue();
+  await page
+    .getByLabel("Checkpoint archive", { exact: true })
+    .setInputFiles({
+      name: "broken.evolab",
+      mimeType: "application/zip",
+      buffer: Buffer.from("not a checkpoint"),
+    });
+  await expect(page.getByRole("alert")).toContainText("truncated");
+  await expect(
+    page.getByLabel("Saved experiments", { exact: true }),
+  ).toHaveValue(selected);
+  await expect(
+    page.getByLabel("Saved experiments", { exact: true }).locator("option"),
+  ).toHaveCount(2);
+  await expect(
+    page.getByRole("button", { name: "Train 10 generations", exact: true }),
+  ).toBeEnabled();
+});

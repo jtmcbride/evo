@@ -262,6 +262,53 @@ export class WorkbenchStore {
       ? structuredClone(this.pendingSave.session)
       : this.makeSession();
   }
+  async exportFile() {
+    if (this.view.storage.archiveBusy) return;
+    this.storage({ archiveBusy: true });
+    try {
+      const session = this.getExportSession(),
+        { exportCheckpoint } = await import("../persistence/archive-client"),
+        bytes = await exportCheckpoint(session),
+        blob = new Blob([Uint8Array.from(bytes).buffer], {
+          type: "application/zip",
+        }),
+        url = URL.createObjectURL(blob),
+        link = document.createElement("a");
+      link.href = url;
+      link.download = `${session.name.replace(/[^a-zA-Z0-9_-]+/g, "-")}-population-${session.checkpoint.generation}.evolab`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (error) {
+      this.problem(error);
+    } finally {
+      this.storage({ archiveBusy: false });
+    }
+  }
+  async importFile(file: File) {
+    if (
+      this.saving ||
+      this.view.initializing ||
+      this.view.storage.archiveBusy ||
+      this.view.status?.training ||
+      this.view.failed
+    )
+      return;
+    this.storage({ archiveBusy: true });
+    this.update({ initializing: true, error: null });
+    try {
+      const { importCheckpoint } =
+          await import("../persistence/archive-client"),
+        session = withRuntime(await importCheckpoint(file), fingerprint()),
+        handle = await this.repository.create(session);
+      await this.activateSaved(handle);
+    } catch (error) {
+      this.problem(error);
+    } finally {
+      await this.refreshLibrary();
+      this.update({ initializing: false });
+      this.storage({ archiveBusy: false });
+    }
+  }
   async loadSaved(id: string) {
     if (this.saving) return;
     this.update({ initializing: true, error: null });
@@ -494,7 +541,7 @@ export class WorkbenchStore {
     void this.retrySave();
   }
   async retrySave() {
-    if (this.saving || !this.checkpoint) return;
+    if (this.saving || !this.checkpoint || this.disposed) return;
     this.saving = true;
     this.storage({ state: "saving", blocked: true });
     const pending = this.pendingSave;
@@ -519,14 +566,6 @@ export class WorkbenchStore {
         pending?.commit,
         interrupted,
       );
-      this.storage({
-        id,
-        revision: handle.entry.revision,
-        state: "saved",
-        lastSaved: handle.entry.updatedAt,
-        blocked: false,
-        notice: null,
-      });
       if (pending) {
         this.checkpoint = handle.session.checkpoint;
         this.replays = [...handle.session.replays]
@@ -548,6 +587,16 @@ export class WorkbenchStore {
           commitId: pending.commit.id,
         });
       }
+      this.storage({
+        id,
+        revision: handle.entry.revision,
+        state: "saved",
+        lastSaved: handle.entry.updatedAt,
+        blocked: false,
+        notice: handle.session.provenance.changes.length
+          ? "This checkpoint has been continued in a different browser runtime; exact cross-runtime replay is not guaranteed."
+          : null,
+      });
       await this.refreshLibrary();
     } catch (error) {
       this.storage({
@@ -567,6 +616,8 @@ export class WorkbenchStore {
           .catch(() => {});
     } finally {
       this.saving = false;
+      if (!this.disposed && this.pendingSave && this.pendingSave !== pending)
+        void this.retrySave();
     }
   }
   async saveSeparate() {
