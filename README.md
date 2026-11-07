@@ -1,6 +1,6 @@
 **Evolution Lab**
 
-A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M6 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser workbench includes seeded setup, training controls, Canvas playback, an inspectable neural graph, sensor readings, measurements, and training/validation history. Historical champions replay their original trials.
+A deterministic, browser-compatible TypeScript engine for neuroevolution experiments. M0–M7 implement independent 2D foraging trials, a 20–12–2 neural controller, mutation-based evolution, exact inspection, and resumable headless runs. The browser workbench includes seeded setup, training controls, Canvas playback, an inspectable neural graph, sensor readings, measurements, and training/validation history. Historical champions replay their original trials. Matched sensor interventions compare an unchanged control episode against a one-input mask, with saved outcomes and portable replay.
 
 Use Node 24.18.0 and the committed npm lockfile:
 
@@ -43,7 +43,6 @@ The pilot reports fixed-validation performance, baselines, initial selection sig
 
 [Implementation plan](docs/implementation-plan.md) and [milestone progress](docs/progress.md) describe contracts, acceptance criteria, and remaining work.
 
-
 Run browser diagnostics with `npm run dev`, then open the “Open runtime diagnostics” link. Initialize an experiment, start training, and open an independent selected trial. Training and playback have separate pause controls. The diagnostic page keeps only the latest five commits in memory. The main workbench saves completed generations in IndexedDB.
 
 Install the pinned test browser and verify the production worker under a repository subpath:
@@ -55,8 +54,8 @@ npm run test:browser
 
 The test command builds with `/evo/` as the asset base, starts a local preview server, and runs Chromium worker and workbench acceptance, including automated accessibility checks. `npm run test:engine` includes pure-engine and runtime/client unit tests. The worker uses approximately 8 ms scheduling slices, exact fixed ticks, a real task yield, and one outstanding render snapshot. `SimulationClient` owns startup, pending requests, stale-message filtering, failure notifications, and disposal. See [the worker contract and acceptance evidence](docs/worker-runtime.md).
 
-
 The main workbench is available at the root URL from `npm run dev`. Configure a world, create an experiment, and train a batch of generations. Select a population controller or historical champion to inspect its original observations, network activity, and motor commands. Use the sensor-only view to hide global geometry. Mobile layouts provide Inspector/History tabs, and Space/right arrow control playback outside form controls. [The workbench guide](docs/workbench.md) describes exact decision timing, replay retention, and verification. The main workbench saves completed generations in this browser and recovers them paused after reload. Use Export checkpoint for a portable `.evolab` backup; Import checkpoint creates a separate local save. A partial active generation reruns from its saved starting population.
 
-
 The save indicator exposes retry and stale-tab recovery. Failed writes pause training with the pending complete population available for export; they do not advance the saved head. Browser storage can be cleared, so keep exported files as independent backups. [Persistence and archive documentation](docs/persistence.md) describes limits, runtime compatibility, and verified failure cases.
+
+Pause a selected trial and use **Sensor intervention** to mask one of its 20 inputs at the next decision. Compare paths, food, contact time, survival, and motor commands, then replay the saved pair after reload or archive import. Comparisons preserve the original controller and training population. [The intervention guide](docs/interventions.md) explains decision timing, saved sources, and interpretation.

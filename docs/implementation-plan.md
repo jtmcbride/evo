@@ -416,4 +416,4 @@ The production app executes in the visitor's browser. It can restore saved gener
 
 The completed first implementation batch was M0 followed by M1: create the toolchain, freeze seed and observation conventions, implement the world, and run a scripted controller headlessly. Its concrete demonstration is a seeded episode whose movement and food accounting match fixtures, whose result hash repeats, and whose tick chunk size does not affect the result.
 
-M2 extended that demonstration to a real neural controller and exact episode restore. M3 added evolution. The engine, exploratory pilot, worker runtime, workbench, and M6 durable saves/archives are complete. M7 adds controlled sensor interventions and matched replay comparisons to the application.
+M2 extended that demonstration to a real neural controller and exact episode restore. M3 added evolution. The engine, exploratory pilot, worker runtime, workbench, durable saves/archives, and M7 controlled sensor interventions with matched replay are complete. M8 adds retained ancestry and parent/child comparisons. See [M7 semantics and acceptance](interventions.md).

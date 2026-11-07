@@ -50,6 +50,84 @@ test("draft validation and preview use actual first-training conditions", () => 
     prepare({ ...settings, elites: 100, immigrants: 100 }),
   ).toThrow();
 });
+test("comparison save failures retain exportable results, retry separately, and restore after loading", async () => {
+  const { MemoryRepository } = await import("../../src/persistence/repository");
+  class Faulty extends MemoryRepository {
+    fail = true;
+    override async saveComparison(
+      ...args: Parameters<
+        InstanceType<typeof MemoryRepository>["saveComparison"]
+      >
+    ) {
+      if (this.fail)
+        throw new DOMException(
+          "Injected comparison quota failure",
+          "QuotaExceededError",
+        );
+      return super.saveComparison(...args);
+    }
+  }
+  const transport = new Transport(),
+    repo = new Faulty(),
+    store = new WorkbenchStore(
+      new SimulationClient(transport as unknown as Worker),
+      repo,
+    );
+  const run = async (work: Promise<void>) => {
+    for (let i = 0; i < 100 && store.getView().comparing; i++) {
+      transport.runtime.pump();
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    await work;
+  };
+  try {
+    await store.ready;
+    store.updateDraft({ population: 16, seconds: 5 });
+    await store.create();
+    const original = store.getInspection(),
+      cp = store.getExportSession().checkpoint;
+    await run(store.compareSensor(16));
+    expect(store.getView().comparisonUnsaved).toBe(true);
+    expect(store.getView().storage.blocked).toBe(false);
+    expect(store.getExportSession().comparisons).toHaveLength(1);
+    expect(store.getInspection()).toEqual(original);
+    expect(store.getExportSession().checkpoint).toEqual(cp);
+    repo.fail = false;
+    await store.retryComparisons();
+    expect(store.getView().comparisonUnsaved).toBe(false);
+    const record = store.getView().comparisons[0],
+      id = store.getView().storage.id!;
+    await store.loadSaved(id);
+    expect(store.getView().comparisons).toEqual([record]);
+    await run(store.compareSensor(16, record));
+    expect(store.getView().comparisonNotice).toMatch(/matches.*exactly/);
+    expect(store.getView().comparisons).toHaveLength(1);
+    await store.train(1);
+    for (let i = 0; i < 200 && !store.getView().history.length; i++) {
+      transport.runtime.pump();
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    await new Promise((r) => setTimeout(r, 0));
+    await store.loadSaved(id);
+    expect(store.getView().comparisons).toEqual([record]);
+    const shifted = structuredClone(record);
+    shifted.masked.firstDecision.hidden![0] += 1e-12;
+    const portable = store.getExportSession();
+    portable.comparisons = [shifted];
+    const imported = await repo.create(portable);
+    await store.loadSaved(imported.entry.id);
+    await run(store.compareSensor(16, shifted));
+    expect(store.getView().comparisonNotice).toMatch(
+      /Replay differs.*original record is preserved/,
+    );
+    expect(store.getView().comparisons).toEqual([shifted]);
+    expect((await repo.load(imported.entry.id)).session.comparisons).toEqual([
+      shifted,
+    ]);
+  } finally {
+    store.dispose();
+  }
+});
 test("workbench keeps stable snapshots and replays the champion under its original scenario", async () => {
   const transport = new Transport(),
     client = new SimulationClient(transport as unknown as Worker),

@@ -12,9 +12,12 @@ import {
   type ExperimentCheckpoint,
 } from "../core/evolution";
 import { hash } from "../core/canonical";
+import { encode } from "../core/codec";
 import { generateScenario } from "../core/world/scenario";
 import type { Genome, Scenario, TrialResult } from "../core/model";
 import type { GenerationCommit } from "../core/experiment";
+import type { SensorComparison } from "../core/comparison";
+import { parseComparison } from "../persistence/model";
 import {
   DEFAULT_SETTINGS,
   type Settings,
@@ -97,6 +100,11 @@ export interface StorageView {
   archiveBusy: boolean;
 }
 export interface ViewState {
+  comparisons: SensorComparison[];
+  comparisonId: string | null;
+  comparing: boolean;
+  comparisonNotice: string | null;
+  comparisonUnsaved: boolean;
   storage: StorageView;
   ready: boolean;
   failed: boolean;
@@ -120,6 +128,7 @@ export interface ViewState {
 }
 import {
   MemoryRepository,
+  mergeComparisons,
   RevisionConflict,
   type Repository,
 } from "../persistence/repository";
@@ -138,6 +147,7 @@ export class WorkbenchStore {
     epoch: number;
   } | null = null;
   private saving = false;
+  private unsavedComparisons = new Set<string>();
 
   private view: ViewState;
   private listeners = new Set<() => void>();
@@ -159,6 +169,11 @@ export class WorkbenchStore {
     readonly repository: Repository = new MemoryRepository(),
   ) {
     this.view = {
+      comparisons: [],
+      comparisonId: null,
+      comparing: false,
+      comparisonNotice: null,
+      comparisonUnsaved: false,
       storage: {
         state: "opening",
         id: null,
@@ -225,6 +240,7 @@ export class WorkbenchStore {
     checkpoint = this.checkpoint!,
     history = this.view.history,
     replays = this.replays,
+    includeComparisons = true,
   ): SavedSession {
     const selected = this.view.selection,
       frame = this.frame;
@@ -254,12 +270,16 @@ export class WorkbenchStore {
           }
         : null,
       provenance: this.provenance,
+      comparisons: includeComparisons ? this.view.comparisons : [],
     });
   }
   getExportSession(): SavedSession {
     if (!this.checkpoint) throw new Error("Create an experiment first");
     return this.pendingSave
-      ? structuredClone(this.pendingSave.session)
+      ? structuredClone({
+          ...this.pendingSave.session,
+          comparisons: this.view.comparisons,
+        })
       : this.makeSession();
   }
   async exportFile() {
@@ -338,6 +358,7 @@ export class WorkbenchStore {
     this.activeSettings = session.settings;
     this.provenance = session.provenance;
     this.pendingSave = null;
+    this.unsavedComparisons.clear();
     this.replays = [...session.replays]
       .sort((a, b) => a.generation - b.generation)
       .slice(-50);
@@ -351,6 +372,11 @@ export class WorkbenchStore {
     this.inspectFrame(true);
     this.update({
       name: session.name,
+      comparisons: session.comparisons ?? [],
+      comparisonId: session.comparisons?.at(-1)?.id ?? null,
+      comparing: false,
+      comparisonNotice: null,
+      comparisonUnsaved: false,
       definition: cp.definition,
       draft: session.settings,
       preview: firstScenario(cp.definition),
@@ -536,6 +562,7 @@ export class WorkbenchStore {
       commit.nextCheckpoint,
       [...this.view.history, summary].slice(-1000),
       replays,
+      false,
     );
     this.pendingSave = { commit, session, epoch };
     void this.retrySave();
@@ -665,11 +692,17 @@ export class WorkbenchStore {
         changes: [],
       };
       this.replays = [];
+      this.unsavedComparisons.clear();
       this.selectedReplay = null;
       this.frame = null;
       this.inspectFrame(true);
       this.update({
         name: this.activeSettings.name,
+        comparisons: [],
+        comparisonId: null,
+        comparing: false,
+        comparisonNotice: null,
+        comparisonUnsaved: false,
         definition: d,
         history: [],
         replayGenerations: [],
@@ -793,6 +826,108 @@ export class WorkbenchStore {
       if (serial === this.serial) this.problem(error);
     } finally {
       if (serial === this.serial) this.update({ loadingPlayback: false });
+    }
+  }
+  selectComparison(id: string) {
+    if (this.view.comparisons.some((c) => c.id === id))
+      this.update({ comparisonId: id });
+  }
+  async compareSensor(channel: number, replay?: SensorComparison) {
+    if (this.view.comparing || this.view.initializing) return;
+    const scope = this.requiredScope(),
+      localId = this.view.storage.id;
+    const selection = this.view.selection;
+    if (!replay && (!selection || this.view.loadingPlayback)) return;
+    this.update({
+      comparing: true,
+      comparisonNotice: "Running two matched episodes…",
+    });
+    try {
+      const reply = await this.client.request(
+        replay
+          ? {
+              type: "replayComparison",
+              ...scope,
+              source: replay.source,
+              channel: replay.intervention.channel,
+            }
+          : {
+              type: "comparePlayback",
+              ...scope,
+              playbackId: selection!.playbackId,
+              channel,
+            },
+      );
+      if (this.scope !== scope || this.disposed) return;
+      if (reply.type !== "comparison")
+        throw new Error("Unexpected comparison reply");
+      const record = parseComparison(reply.comparison);
+      if (
+        replay &&
+        hash(JSON.parse(encode(record))) !== hash(JSON.parse(encode(replay)))
+      )
+        throw new Error(
+          "Replay differs from the saved comparison in this runtime. The original record is preserved.",
+        );
+      const comparisons = mergeComparisons(this.view.comparisons, [record]);
+      this.unsavedComparisons.add(record.id);
+      this.update({
+        comparisons,
+        comparisonId: record.id,
+        comparisonUnsaved: true,
+        comparisonNotice: replay
+          ? "Replay matches the saved outcomes and trajectories exactly. Saving…"
+          : "Comparison complete. Saving…",
+      });
+      await this.persistComparisons(scope, localId, !!replay);
+    } catch (error) {
+      if (this.scope === scope && !this.disposed)
+        this.update({
+          comparisonNotice: `Comparison failed: ${String(error)}`,
+        });
+    } finally {
+      if (this.scope === scope && !this.disposed)
+        this.update({ comparing: false });
+    }
+  }
+  private async persistComparisons(
+    scope: NonNullable<WorkbenchStore["scope"]>,
+    localId: string | null,
+    replay = false,
+  ) {
+    try {
+      if (!localId) throw new Error("Local storage is unavailable");
+      for (const c of this.view.comparisons) {
+        if (this.unsavedComparisons.has(c.id)) {
+          await this.repository.saveComparison(localId, c);
+          if (this.scope !== scope || this.disposed) return;
+          this.unsavedComparisons.delete(c.id);
+        }
+      }
+      if (this.scope === scope && !this.disposed)
+        this.update({
+          comparisonUnsaved: false,
+          comparisonNotice: replay
+            ? "Replay matches the saved outcomes and trajectories exactly. Saved locally."
+            : "Comparison saved locally.",
+        });
+    } catch (error) {
+      if (this.scope === scope && !this.disposed)
+        this.update({
+          comparisonUnsaved: true,
+          comparisonNotice: `Comparison is in memory; saving failed: ${String(error)} Retry saving or export a checkpoint.`,
+        });
+    }
+  }
+  async retryComparisons() {
+    if (this.view.comparing) return;
+    const scope = this.requiredScope();
+    this.update({ comparing: true });
+    try {
+      await this.persistComparisons(scope, this.view.storage.id);
+    } finally {
+      if (this.scope === scope && !this.disposed)
+        this.update({ comparing: false });
     }
   }
   selectPopulation(id: string) {

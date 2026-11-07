@@ -19,6 +19,181 @@
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --display: "Avenir Next", "Trebuchet MS", sans-serif;
 }
+.comparison-panel {
+  margin: 20px 0 0;
+  padding: 24px;
+  min-width: 0;
+}
+.comparison-panel > p {
+  max-width: 85ch;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.comparison-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.comparison-controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+}
+.comparison-controls select {
+  max-width: 100%;
+  min-width: 190px;
+}
+.comparison-timing {
+  color: var(--muted);
+  font: 12px var(--mono);
+  padding: 10px 0;
+}
+.comparison-status {
+  min-height: 1.6em;
+}
+.comparison-saved {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 18px;
+}
+.comparison-context {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.comparison-paths,
+.comparison-tables {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.comparison-trajectory {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.comparison-trajectory figcaption {
+  padding: 12px;
+  font-weight: 650;
+  font-size: 13px;
+}
+.comparison-trajectory figcaption span {
+  display: block;
+  margin-top: 5px;
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 12px;
+}
+.comparison-trajectory svg {
+  display: block;
+  width: 100%;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+}
+.comparison-obstacle {
+  fill: #7b8fa2;
+}
+.comparison-food {
+  fill: #25834f;
+  opacity: 0.5;
+}
+.comparison-path {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 3;
+}
+.comparison-start {
+  fill: white;
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+.comparison-end {
+  fill: var(--blue);
+}
+.comparison-trajectory:nth-child(2) .comparison-path {
+  stroke: var(--teal);
+}
+.comparison-trajectory:nth-child(2) .comparison-end {
+  fill: var(--teal);
+}
+.comparison-legend,
+.comparison-caveat {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.comparison-tables {
+  margin: 20px 0;
+  align-items: start;
+}
+.comparison-tables p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.comparison-table-scroll {
+  min-width: 0;
+  overflow-x: auto;
+}
+.comparison-panel table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+.comparison-panel td,
+.comparison-panel th {
+  border-bottom: 1px solid var(--line);
+  padding: 9px 7px;
+  text-align: right;
+  white-space: nowrap;
+}
+.comparison-panel th:first-child {
+  text-align: left;
+}
+.comparison-panel td {
+  font-family: var(--mono);
+}
+.comparison-panel thead {
+  color: var(--muted);
+}
+.comparison-mask-value {
+  padding: 12px;
+  border-left: 3px solid var(--teal);
+  background: #edf7f7;
+  font-size: 13px;
+}
+.comparison-panel summary {
+  cursor: pointer;
+  font-size: 13px;
+  padding: 12px 0;
+}
+.comparison-panel .masked-row {
+  background: #edf7f7;
+}
+@media (max-width: 760px) {
+  .comparison-panel {
+    padding: 16px;
+  }
+  .comparison-paths,
+  .comparison-tables {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .comparison-controls {
+    align-items: stretch;
+  }
+  .comparison-controls label {
+    width: 100%;
+  }
+  .comparison-controls select {
+    width: 100%;
+    min-width: 0;
+  }
+}
 * {
   box-sizing: border-box;
 }

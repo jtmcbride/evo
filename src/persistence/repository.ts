@@ -148,7 +148,10 @@ export class MemoryRepository implements Repository {
     if (old.entry.revision !== revision) throw new RevisionConflict();
     this.comparisons.set(
       id,
-      mergeComparisons(old.session.comparisons, session.comparisons),
+      mergeComparisons(
+        this.comparisons.get(id),
+        mergeComparisons(old.session.comparisons, session.comparisons),
+      ),
     );
     const h = {
       entry: entryFor(id, revision + 1, session, interrupted),
@@ -168,7 +171,10 @@ export class MemoryRepository implements Repository {
     const current = await this.load(id);
     this.comparisons.set(
       id,
-      mergeComparisons(current.session.comparisons, [c]),
+      mergeComparisons(
+        this.comparisons.get(id),
+        mergeComparisons(current.session.comparisons, [c]),
+      ),
     );
   }
   close() {}
