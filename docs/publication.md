@@ -25,3 +25,5 @@ VITE_BASE_PATH=/evo/ npm run build
 ```
 
 The long scientific benchmark is deliberately separate from deployment checks. A short pilot measures early learning and local runtime cost; it does not establish held-out generalization or browser performance. M10's frozen benchmark, representative browser-generated examples, and Firefox/WebKit release acceptance remain separate work.
+
+The [initial publication pilot](benchmarks/m10-short-pilot.md) records the bounded three-run check performed after the first public push.

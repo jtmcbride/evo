@@ -1,0 +1,435 @@
+{
+  "provenance": {
+    "sourceCommit": "ffde932e4c3b9689b056b880fb9ac6d1b95a5c07",
+    "date": "2026-11-06",
+    "timezone": "America/Los_Angeles",
+    "command": "npm run benchmark -- --runs 3 --generations 10 --out artifacts/m10-short-pilot",
+    "elapsedSeconds": 62.14,
+    "seedPolicy": "Existing pilot-v1-0 through pilot-v1-2; reused M3 task-design seeds, not new held-out data",
+    "timingScope": "Node process with occasional lightweight release checks; no simultaneous local correctness/browser suite",
+    "checkpointDirectory": "artifacts/m10-short-pilot (ignored local output)"
+  },
+  "purpose": "Exploratory task-design pilot; not a held-out benchmark",
+  "runtime": {
+    "node": "v24.18.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M1 Pro"
+  },
+  "runs": [
+    {
+      "run": 0,
+      "definition": {
+        "id": "experiment-pilot-v1-0",
+        "world": {
+          "width": 800,
+          "height": 600,
+          "foodCount": 48,
+          "obstacleCount": 0,
+          "bodyRadius": 8,
+          "foodRadius": 4,
+          "sensorRange": 140,
+          "vMax": 90,
+          "omegaMax": 3.141592653589793,
+          "maxTicks": 1800,
+          "maxEnergy": 100,
+          "foodEnergy": 20
+        },
+        "evolution": {
+          "population": 128,
+          "elites": 4,
+          "immigrants": 8,
+          "trials": 3,
+          "tournamentSize": 4,
+          "mutationProbability": 0.1,
+          "mutationSigma": 0.05,
+          "validationInterval": 10,
+          "validationTrials": 16
+        },
+        "roots": {
+          "initialization": "pilot-v1-0:initialization",
+          "training": "pilot-v1-0:training",
+          "evolution": "pilot-v1-0:evolution",
+          "validation": "pilot-v1-0:validation"
+        }
+      },
+      "initialValidation": 6.75,
+      "finalValidation": 10.1875,
+      "initialNonzeroFraction": 0.765625,
+      "baselines": {
+        "frozenRandom": 0.875,
+        "randomActions": 0.5,
+        "scripted": 22.125
+      },
+      "generationSeconds": {
+        "median": 2.0126555000000006,
+        "p95": 2.1288220829999998
+      },
+      "summaries": [
+        {
+          "generation": 0,
+          "trainBest": 7.333333333333333,
+          "trainMean": 1.3880208333333333,
+          "validation": [],
+          "commitId": "5d7342711f38363c998a922bc763f02d5de08bb1a0f74c11304075e20807d692"
+        },
+        {
+          "generation": 1,
+          "trainBest": 9.333333333333334,
+          "trainMean": 2.546875,
+          "validation": [],
+          "commitId": "a4794e8b52cba35f5706d42718d9c85f4d4327d466a0a0e75fbd9195569c61f8"
+        },
+        {
+          "generation": 2,
+          "trainBest": 10.333333333333334,
+          "trainMean": 4.221354166666667,
+          "validation": [],
+          "commitId": "7f2a34973e302c7af4df3294a6228ef82532ae69bcfdacb6c317b795730362c2"
+        },
+        {
+          "generation": 3,
+          "trainBest": 12.333333333333334,
+          "trainMean": 5.247395833333333,
+          "validation": [],
+          "commitId": "5d278c7cf65ff89640d0c8243f4a6362aa08ce903e65814e4c655f16471c9fe6"
+        },
+        {
+          "generation": 4,
+          "trainBest": 16,
+          "trainMean": 7.450520833333333,
+          "validation": [],
+          "commitId": "d16e374ee32973f1fc3bd0f9b9ed4a0e59b84b5ea5d533d5ceacedfce61c92c0"
+        },
+        {
+          "generation": 5,
+          "trainBest": 12.333333333333334,
+          "trainMean": 5.450520833333333,
+          "validation": [],
+          "commitId": "ff569f65fffbb1fa5ea1ca55999072dc9a434970a83d625b6eb428d3fbe75baa"
+        },
+        {
+          "generation": 6,
+          "trainBest": 10.666666666666666,
+          "trainMean": 5.736979166666667,
+          "validation": [],
+          "commitId": "874d6fa60e5fd04d4e5220ccc73319fee25a23499b5ef77befd6cc5db1a212d9"
+        },
+        {
+          "generation": 7,
+          "trainBest": 16.333333333333332,
+          "trainMean": 8.307291666666666,
+          "validation": [],
+          "commitId": "c55cf7a35b4e4b21e5da3dded1eab974b4c7652921bc1bc2939e8b58d779b1a9"
+        },
+        {
+          "generation": 8,
+          "trainBest": 15.666666666666666,
+          "trainMean": 8.455729166666666,
+          "validation": [],
+          "commitId": "7c1995bec1ddc2ebab5f34b4518efbb5e63fd7c5b870c9760c00bce49d56b02c"
+        },
+        {
+          "generation": 9,
+          "trainBest": 15,
+          "trainMean": 9.635416666666666,
+          "validation": [
+            16,
+            9,
+            8,
+            4,
+            13,
+            11,
+            16,
+            7,
+            9,
+            8,
+            6,
+            8,
+            12,
+            15,
+            11,
+            10
+          ],
+          "commitId": "75158f4019fea2e96484b20cc50e02c5766084ee5b81a7584f5d5b3893ac5238"
+        }
+      ]
+    },
+    {
+      "run": 1,
+      "definition": {
+        "id": "experiment-pilot-v1-1",
+        "world": {
+          "width": 800,
+          "height": 600,
+          "foodCount": 48,
+          "obstacleCount": 0,
+          "bodyRadius": 8,
+          "foodRadius": 4,
+          "sensorRange": 140,
+          "vMax": 90,
+          "omegaMax": 3.141592653589793,
+          "maxTicks": 1800,
+          "maxEnergy": 100,
+          "foodEnergy": 20
+        },
+        "evolution": {
+          "population": 128,
+          "elites": 4,
+          "immigrants": 8,
+          "trials": 3,
+          "tournamentSize": 4,
+          "mutationProbability": 0.1,
+          "mutationSigma": 0.05,
+          "validationInterval": 10,
+          "validationTrials": 16
+        },
+        "roots": {
+          "initialization": "pilot-v1-1:initialization",
+          "training": "pilot-v1-1:training",
+          "evolution": "pilot-v1-1:evolution",
+          "validation": "pilot-v1-1:validation"
+        }
+      },
+      "initialValidation": 8.5,
+      "finalValidation": 10.3125,
+      "initialNonzeroFraction": 0.8125,
+      "baselines": {
+        "frozenRandom": 0.9375,
+        "randomActions": 0.9375,
+        "scripted": 19.6875
+      },
+      "generationSeconds": {
+        "median": 2.0172867499999994,
+        "p95": 2.1287781250000006
+      },
+      "summaries": [
+        {
+          "generation": 0,
+          "trainBest": 12.666666666666666,
+          "trainMean": 1.3333333333333333,
+          "validation": [],
+          "commitId": "ef80e9de5b6803d17775e60afa5128b324c5687bd5f11bf939151ea6cf81f080"
+        },
+        {
+          "generation": 1,
+          "trainBest": 10.666666666666666,
+          "trainMean": 2.75,
+          "validation": [],
+          "commitId": "299e31b51950ca598a71c9c8812fd0b635c3fded884781e748a0a41ae9b60697"
+        },
+        {
+          "generation": 2,
+          "trainBest": 9.666666666666666,
+          "trainMean": 3.6458333333333335,
+          "validation": [],
+          "commitId": "c6aaf5184a7b6f1f72ed4d1d36b6dab193fde03293ecf1596fe45c98366887b2"
+        },
+        {
+          "generation": 3,
+          "trainBest": 11.333333333333334,
+          "trainMean": 5.6796875,
+          "validation": [],
+          "commitId": "20e63aa3d80294dd208d85795aa92513962b61ca69f66aaf2c646590284d1f86"
+        },
+        {
+          "generation": 4,
+          "trainBest": 12,
+          "trainMean": 7.078125,
+          "validation": [],
+          "commitId": "d89cbc1f05e0513ef83dd99a8eb09bd344991c7e8c65507c24b7057e167497a4"
+        },
+        {
+          "generation": 5,
+          "trainBest": 12.666666666666666,
+          "trainMean": 7.15625,
+          "validation": [],
+          "commitId": "b9aa87fa86f22c3e6f2aced2720a8dda809d89f52d6fc9f2e2b588d72de1f57e"
+        },
+        {
+          "generation": 6,
+          "trainBest": 15,
+          "trainMean": 10.018229166666666,
+          "validation": [],
+          "commitId": "60cbd3f841dbad8d1a3e35679592a8ea123ab02554959c0d85e7f97b6173d19b"
+        },
+        {
+          "generation": 7,
+          "trainBest": 15,
+          "trainMean": 9.106770833333334,
+          "validation": [],
+          "commitId": "b66af1040358dafc5d789a11e2049c28abebfc135dfc6d99348647d133045050"
+        },
+        {
+          "generation": 8,
+          "trainBest": 15.333333333333334,
+          "trainMean": 8.432291666666666,
+          "validation": [],
+          "commitId": "b4984e36caa93511b652985fad86d6627ba5134a078ae287f6681fcc18caed4b"
+        },
+        {
+          "generation": 9,
+          "trainBest": 13.333333333333334,
+          "trainMean": 9.231770833333334,
+          "validation": [
+            10,
+            10,
+            11,
+            7,
+            12,
+            12,
+            9,
+            11,
+            11,
+            14,
+            6,
+            10,
+            6,
+            12,
+            11,
+            13
+          ],
+          "commitId": "0c0a55311d9c2d99a0feb6c1a196463a7cbe5a1d4d97ef6f06abab0d71129ea3"
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "definition": {
+        "id": "experiment-pilot-v1-2",
+        "world": {
+          "width": 800,
+          "height": 600,
+          "foodCount": 48,
+          "obstacleCount": 0,
+          "bodyRadius": 8,
+          "foodRadius": 4,
+          "sensorRange": 140,
+          "vMax": 90,
+          "omegaMax": 3.141592653589793,
+          "maxTicks": 1800,
+          "maxEnergy": 100,
+          "foodEnergy": 20
+        },
+        "evolution": {
+          "population": 128,
+          "elites": 4,
+          "immigrants": 8,
+          "trials": 3,
+          "tournamentSize": 4,
+          "mutationProbability": 0.1,
+          "mutationSigma": 0.05,
+          "validationInterval": 10,
+          "validationTrials": 16
+        },
+        "roots": {
+          "initialization": "pilot-v1-2:initialization",
+          "training": "pilot-v1-2:training",
+          "evolution": "pilot-v1-2:evolution",
+          "validation": "pilot-v1-2:validation"
+        }
+      },
+      "initialValidation": 5.75,
+      "finalValidation": 11.9375,
+      "initialNonzeroFraction": 0.8203125,
+      "baselines": {
+        "frozenRandom": 1.0625,
+        "randomActions": 0.375,
+        "scripted": 25.875
+      },
+      "generationSeconds": {
+        "median": 1.9795834590000012,
+        "p95": 2.172002708
+      },
+      "summaries": [
+        {
+          "generation": 0,
+          "trainBest": 8.666666666666666,
+          "trainMean": 1.328125,
+          "validation": [],
+          "commitId": "0756f87a0c1c1b7865fa20218fa2dba4f8d0ba655e016b6a05aaf12ca7731bec"
+        },
+        {
+          "generation": 1,
+          "trainBest": 11.333333333333334,
+          "trainMean": 3.0182291666666665,
+          "validation": [],
+          "commitId": "0ceb0ed4d53248016dead58ac1645276a54e46731c8a1be875fcf3431c6c4502"
+        },
+        {
+          "generation": 2,
+          "trainBest": 12.666666666666666,
+          "trainMean": 4.479166666666667,
+          "validation": [],
+          "commitId": "1981cba4de18088e919b7fecc60e8777c58ed99b7371d42f4e4ffb7ee9cd6819"
+        },
+        {
+          "generation": 3,
+          "trainBest": 15.333333333333334,
+          "trainMean": 6.619791666666667,
+          "validation": [],
+          "commitId": "7043aaabd94e24f0f6ac501fb61b86f3e2872f1ff00a0edce50da7f3962b9ff1"
+        },
+        {
+          "generation": 4,
+          "trainBest": 16,
+          "trainMean": 9.697916666666666,
+          "validation": [],
+          "commitId": "2dbfdffcf88f69f7a1ee430862ce323a64f2a1dac3831163f70646c76f7e94ea"
+        },
+        {
+          "generation": 5,
+          "trainBest": 18.333333333333332,
+          "trainMean": 12.854166666666666,
+          "validation": [],
+          "commitId": "06fcdcd57cc695c4dd4abe2210150310d7f67f6e6c3a01b3b67aea66e5b11148"
+        },
+        {
+          "generation": 6,
+          "trainBest": 16.333333333333332,
+          "trainMean": 10.846354166666666,
+          "validation": [],
+          "commitId": "8f10c4f769e49aacaa747501565e815744d537a4357e0eaf3df2e9bf44c59e8c"
+        },
+        {
+          "generation": 7,
+          "trainBest": 16.666666666666668,
+          "trainMean": 11.205729166666666,
+          "validation": [],
+          "commitId": "676ac64b902b743b98fc6d03c1029e016ac6c3972bf9a7390b88b5d1e2ecc594"
+        },
+        {
+          "generation": 8,
+          "trainBest": 16.333333333333332,
+          "trainMean": 10.684895833333334,
+          "validation": [],
+          "commitId": "0760c11e665f91b1f80fd743156157b2f27b01f8b6e3df6c7573b1e84417c125"
+        },
+        {
+          "generation": 9,
+          "trainBest": 18.333333333333332,
+          "trainMean": 13.192708333333334,
+          "validation": [
+            8,
+            14,
+            14,
+            15,
+            12,
+            7,
+            7,
+            18,
+            15,
+            17,
+            4,
+            12,
+            9,
+            16,
+            7,
+            16
+          ],
+          "commitId": "fc89e7582647f72a612404f0c660bfaa7dbd330d7b68343097ac5cb4b43aad94"
+        }
+      ]
+    }
+  ]
+}
